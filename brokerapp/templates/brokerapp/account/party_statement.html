@@ -8,7 +8,7 @@
       <div class="d-flex justify-content-between align-items-center">
         <h6 class="mb-0">Party Statement</h6>
 
-        {# Header: only party select + Statement button #}
+        {# Header: party select + Statement button #}
         <form method="post" class="d-flex align-items-center">
           {% csrf_token %}
           <select name="party" id="party-select" class="form-select form-select-sm me-2" aria-label="Select party" required>
@@ -31,12 +31,13 @@
       <div class="table-responsive">
         <table class="table table-sm table-hover mb-0 party-stmt-table">
           <colgroup>
-            <col style="width:12%;">
-            <col style="width:13%;">
-            <col style="width:13%;">
-            <col style="width:13%;">
-            <col style="width:29%;">
-            <col style="width:20%;">
+            <col style="width:10%;">   <!-- Entry No -->
+            <col style="width:13%;">   <!-- Date -->
+            <col style="width:13%;">   <!-- Debit -->
+            <col style="width:13%;">   <!-- Credit -->
+            <col style="width:18%;">   <!-- Firm -->
+            <col style="width:18%;">   <!-- Remark -->
+            <col style="width:15%;">   <!-- Balance -->
           </colgroup>
 
           <thead class="table-light small text-center align-middle">
@@ -45,6 +46,7 @@
               <th>Date</th>
               <th class="text-end">Debit</th>
               <th class="text-end">Credit</th>
+              <th>Firm</th>
               <th class="remark">Remark</th>
               <th class="text-end">Balance</th>
             </tr>
@@ -63,11 +65,26 @@
                   </td>
 
                   <td class="align-middle text-end">
-                    <span class="cell-num">{% if e.debit %}{{ e.debit|floatformat:2 }}{% else %}0.00{% endif %}</span>
+                    <span class="cell-num">
+                      {% if e.debit %}{{ e.debit|floatformat:2 }}{% else %}0.00{% endif %}
+                    </span>
                   </td>
 
                   <td class="align-middle text-end">
-                    <span class="cell-num">{% if e.credit %}{{ e.credit|floatformat:2 }}{% else %}0.00{% endif %}</span>
+                    <span class="cell-num">
+                      {% if e.credit %}{{ e.credit|floatformat:2 }}{% else %}0.00{% endif %}
+                    </span>
+                  </td>
+
+                  {# NEW: Firm column #}
+                  <td class="align-middle text-start">
+                    {% if e.firm_name %}
+                      {{ e.firm_name }}
+                    {% elif e.firm %}
+                      {{ e.firm }}
+                    {% else %}
+                      &nbsp;
+                    {% endif %}
                   </td>
 
                   <td class="align-middle remark text-start">
@@ -81,7 +98,7 @@
               {% endfor %}
             {% else %}
               <tr>
-                <td colspan="6" class="text-center text-muted py-3">
+                <td colspan="7" class="text-center text-muted py-3">
                   Select a party and click <strong>Statement</strong> to view details.
                 </td>
               </tr>
@@ -93,7 +110,8 @@
               <th colspan="2" class="text-start">Total</th>
               <th class="text-end">{{ total_debit|floatformat:2 }}</th>
               <th class="text-end">{{ total_credit|floatformat:2 }}</th>
-              <th></th>
+              <th></th>   <!-- Firm total (blank) -->
+              <th></th>   <!-- Remark (blank) -->
               <th class="text-end">{{ balance|floatformat:2 }}</th>
             </tr>
           </tfoot>
@@ -101,7 +119,7 @@
       </div>
     </div>
 
-    <!-- Footer: Print / Export Excel / PDF (mirrors All Party Balance placement) -->
+    <!-- Footer: Print / Export Excel / PDF -->
     <div class="card-footer bg-white">
       <div class="d-flex gap-2">
         <!-- Print -->
@@ -111,13 +129,12 @@
           <button type="submit" name="action" value="print" class="btn btn-outline-secondary">Print</button>
         </form>
 
-        <!-- Export Excel (outline -> shows green on hover) -->
+        <!-- Export Excel -->
         <form method="post" class="m-0">
           {% csrf_token %}
           <input type="hidden" name="party" class="footer-party" value="{% if selected %}{{ selected.pk }}{% endif %}">
           <button type="submit" name="action" value="export_excel" class="btn btn-outline-success">Export Excel</button>
         </form>
-
 
         <!-- PDF -->
         <form method="post" class="m-0">
@@ -148,7 +165,7 @@ document.addEventListener('DOMContentLoaded', function(){
     footerInputs.forEach(inp => inp.value = select.value || '');
   });
 
-  // As a UX convenience, if user clicks a footer button without selecting, prevent submit and show simple alert
+  // If user clicks footer button without selecting party, stop + alert
   const footerForms = document.querySelectorAll('.card-footer form');
   footerForms.forEach(form => {
     form.addEventListener('submit', function(e){

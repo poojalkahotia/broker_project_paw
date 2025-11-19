@@ -1,8 +1,8 @@
 # invapp/views/party_views.py
 
 from django.shortcuts import render, get_object_or_404, redirect
-from brokerapp.forms import PartyForm, BrokerForm, ItemForm
-from brokerapp.models import HeadParty, Broker, HeadItem ,SaleMaster, SaleDetails ,PurchaseMaster, PurchaseDetails, DailyPage, JamaEntry, NaameEntry
+from brokerapp.forms import PartyForm, BrokerForm, ItemForm, FirmForm 
+from brokerapp.models import HeadParty, Broker, HeadItem ,SaleMaster, SaleDetails ,PurchaseMaster, PurchaseDetails, DailyPage, JamaEntry, NaameEntry, Firm
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
@@ -26,7 +26,7 @@ from .forms import AllPartyBalanceForm
 from django.urls import reverse
 from urllib.parse import quote
 import io
-
+from decimal import Decimal, InvalidOperation
 try:
     from openpyxl import Workbook
     from openpyxl.utils import get_column_letter
@@ -134,6 +134,13 @@ def sale_form(request, invno=None):
     next_invno = SaleMaster.objects.filter(org=request.current_org).aggregate(Max("invno"))['invno__max']
     next_invno = (next_invno + 1) if next_invno else 1
 
+    # Firms: try to scope to current_org if Firm has org FK, otherwise return all firms
+    try:
+        # if Firm has 'org' field this will work; otherwise it raises FieldDoesNotExist or similar
+        firms_qs = Firm.objects.filter(org=request.current_org).order_by('firmname')
+    except Exception:
+        firms_qs = Firm.objects.all().order_by('firmname')
+    
     context = {
         "sale": sale,
         "sale_items_json": sale_items_json,
@@ -143,6 +150,7 @@ def sale_form(request, invno=None):
         "items": HeadItem.objects.filter(org=request.current_org).order_by('item_name'),
         "parties": HeadParty.objects.filter(org=request.current_org).order_by('partyname'),
         "brokers": Broker.objects.filter(org=request.current_org).order_by('brokername'),
+        "firms": firms_qs,
     }
     return render(request, "brokerapp/sale.html", context)
 
@@ -163,6 +171,7 @@ def save_sale(request):
         extra = request.POST.get("extra", "").strip()
         party_pk = request.POST.get("party")
         broker_pk = request.POST.get("broker")
+        firm_pk = request.POST.get("firm")
         vehicleno = request.POST.get("vehicleno", "").strip()
 
         items_json = request.POST.get("items_json") or "[]"
@@ -190,7 +199,16 @@ def save_sale(request):
         # Resolve FKs inside same org
         party = get_object_or_404(HeadParty, pk=party_pk, org=request.current_org)
         broker = get_object_or_404(Broker, pk=broker_pk, org=request.current_org)
-
+        # Firm must belong to same org (if Firm has org FK). If your Firm model isn't org-scoped,
+        # remove the org=... kwarg below.
+        # Resolve Firm. If Firm model has an 'org' FK, scope by current_org; otherwise resolve by pk only.
+        firm = None
+        if firm_pk:
+            firm_fields = [f.name for f in Firm._meta.get_fields()]
+            if 'org' in firm_fields:
+                firm = get_object_or_404(Firm, pk=firm_pk, org=request.current_org)
+            else:
+                firm = get_object_or_404(Firm, pk=firm_pk)
         # Create SaleMaster with org + created_by
         sale = SaleMaster.objects.create(
             org=request.current_org,
@@ -199,6 +217,7 @@ def save_sale(request):
             awakno=awakno,
             party=party,
             broker=broker,
+            firm=firm,
             vehicleno=vehicleno,
             extra=extra,
             totalamt=total_amt.quantize(Decimal('0.01')),
@@ -289,12 +308,22 @@ def update_sale(request, invno):
         # Resolve FKs inside same org
         party = get_object_or_404(HeadParty, pk=party_pk, org=request.current_org)
         broker = get_object_or_404(Broker, pk=broker_pk, org=request.current_org)
-
+        firm_pk = request.POST.get("firm")
+        # Resolve Firm safely: only include org= when the Firm model actually has that field.
+        firm = None
+        if firm_pk:
+            firm_fields = [f.name for f in Firm._meta.get_fields()]
+            if 'org' in firm_fields:
+                firm = get_object_or_404(Firm, pk=firm_pk, org=request.current_org)
+            else:
+                firm = get_object_or_404(Firm, pk=firm_pk)
         # Update header
         sale.invdate = invdate
         sale.awakno = awakno
         sale.party = party
         sale.broker = broker
+        if firm is not None:
+            sale.firm = firm
         sale.vehicleno = vehicleno
         sale.extra = extra
         sale.totalamt = total_amt.quantize(Decimal('0.01'))
@@ -366,6 +395,7 @@ def sale_report(request):
     start_date = request.GET.get("start_date")
     end_date = request.GET.get("end_date")
     broker_id = request.GET.get("broker")
+    firm_id = request.GET.get("firm")         # optional firm filter (pk or name)
     report_type = request.GET.get("report_type", "date")
 
     # Default date = today
@@ -378,7 +408,7 @@ def sale_report(request):
     sales = (
         SaleMaster.objects
         .filter(org=request.current_org)
-        .select_related("broker")
+        .select_related("broker", "firm")   # firm selected for template access
         .prefetch_related(Prefetch("details", queryset=SaleDetails.objects.select_related("item")))
     )
 
@@ -394,6 +424,14 @@ def sale_report(request):
             sales = sales.filter(broker__pk=broker_id)
         else:
             sales = sales.filter(broker__brokername=broker_id)
+
+    # Firm filter: allow pk or name, scoped to org (only apply when provided and not "all")
+    if firm_id and firm_id != "all":
+        # try pk (firm FK)
+        if sales.filter(firm__pk=firm_id).exists():
+            sales = sales.filter(firm__pk=firm_id)
+        else:
+            sales = sales.filter(firm__firmname=firm_id)
 
     sales = sales.order_by("invdate")
 
@@ -413,9 +451,8 @@ def sale_report(request):
 
         for g in grouped:
             group_sales = sales.filter(invdate=g["invdate"])
-            # TBWt sum for this group (sum over details)
+            # TBWt & FrkWt sum for this group (sum over details)
             tbwt_sum = SaleDetails.objects.filter(salemaster__in=group_sales).aggregate(total_tbwt=Sum("tbwt"))["total_tbwt"] or 0
-            # FrkWt sum for this group (sum over details)
             frkwt_sum = SaleDetails.objects.filter(salemaster__in=group_sales).aggregate(total_frkwt=Sum("frkwt"))["total_frkwt"] or 0
 
             g["total_tbwt"] = tbwt_sum
@@ -455,6 +492,40 @@ def sale_report(request):
                 "totals": g
             })
 
+    elif report_type == "firm":
+        # Group by invdate + firm (firm may be null)
+        grouped = sales.values("invdate", "firm__firmname").annotate(
+            total_totalamt=Sum("totalamt"),
+            total_batavamt=Sum("batavamt"),
+            total_dramt=Sum("dramt"),
+            total_other=Sum("other"),
+            total_total=Sum("total"),
+            total_advance=Sum("advance"),
+            total_netamt=Sum("netamt"),
+        ).order_by("invdate", "firm__firmname")
+
+        for g in grouped:
+            firm_name = g.get("firm__firmname")  # may be None
+            if firm_name is None:
+                # sales with NULL firm for that date
+                group_sales = sales.filter(invdate=g["invdate"], firm__isnull=True)
+                label_firm = "No Firm"
+            else:
+                group_sales = sales.filter(invdate=g["invdate"], firm__firmname=firm_name)
+                label_firm = firm_name
+
+            tbwt_sum = SaleDetails.objects.filter(salemaster__in=group_sales).aggregate(total_tbwt=Sum("tbwt"))["total_tbwt"] or 0
+            frkwt_sum = SaleDetails.objects.filter(salemaster__in=group_sales).aggregate(total_frkwt=Sum("frkwt"))["total_frkwt"] or 0
+
+            g["total_tbwt"] = tbwt_sum
+            g["total_frkwt"] = frkwt_sum
+
+            report_data.append({
+                "group": f"{g['invdate']} - {label_firm}",
+                "items": group_sales,
+                "totals": g
+            })
+
     # Overall Totals (header-level) + TBWt + FrkWt across all details in the filtered set
     overall_totals = sales.aggregate(
         total_totalamt=Sum("totalamt"),
@@ -473,6 +544,16 @@ def sale_report(request):
 
     # Dropdowns also ORG SCOPED
     brokers = Broker.objects.filter(org=request.current_org).order_by("brokername")
+    
+    try:
+        firm_field_names = [f.name for f in Firm._meta.get_fields()]
+        if 'org' in firm_field_names:
+            firms = Firm.objects.filter(org=request.current_org).order_by('firmname')
+        else:
+            firms = Firm.objects.all().order_by('firmname')
+    except Exception:
+        # defensive fallback: return all firms if meta inspection fails
+        firms = Firm.objects.all().order_by('firmname')
 
     context = {
         "report_data": report_data,
@@ -480,7 +561,9 @@ def sale_report(request):
         "start_date": start_date,
         "end_date": end_date,
         "brokers": brokers,
+        "firms": firms,
         "selected_broker": broker_id if broker_id != "all" else None,
+        "selected_firm": firm_id if firm_id != "all" else None,
         "report_type": report_type,
     }
     return render(request, "brokerapp/sale_report.html", context)
@@ -496,30 +579,42 @@ def sale_report_pdf(request):
     start_date = request.GET.get("start_date") or date.today().strftime("%Y-%m-%d")
     end_date = request.GET.get("end_date") or date.today().strftime("%Y-%m-%d")
     broker_id = request.GET.get("broker")
+    firm_id = request.GET.get("firm")          # NEW: firm filter
     report_type = request.GET.get("report_type", "date")
 
     sales = (
         SaleMaster.objects
         .filter(org=request.current_org)
-        .select_related("broker")
+        .select_related("broker", "firm")   # firm selected for template/pdf access
         .prefetch_related(Prefetch("details", queryset=SaleDetails.objects.select_related("item")))
     )
     if start_date:
         sales = sales.filter(invdate__gte=parse_date(start_date))
     if end_date:
         sales = sales.filter(invdate__lte=parse_date(end_date))
+
     if broker_id and broker_id != "all":
         if sales.filter(broker__pk=broker_id).exists():
             sales = sales.filter(broker__pk=broker_id)
         else:
             sales = sales.filter(broker__brokername=broker_id)
+
+    # APPLY FIRM FILTER (same behavior as in HTML view)
+    if firm_id and firm_id != "all":
+        if sales.filter(firm__pk=firm_id).exists():
+            sales = sales.filter(firm__pk=firm_id)
+        else:
+            sales = sales.filter(firm__firmname=firm_id)
+
     sales = sales.order_by("invdate", "invno")
 
     # group-key helpers (just for headings)
     if report_type == "date":
         def group_key(s): return (s.invdate,)
-    else:
+    elif report_type == "broker":
         def group_key(s): return (s.invdate, s.broker.brokername if s.broker else "")
+    else:  # report_type == "firm" (or others) -> use firm as second key
+        def group_key(s): return (s.invdate, s.firm.firmname if s.firm else "")
 
     # --- FPDF setup ---
     pdf = FPDF(orientation="P", unit="mm", format="A4")
@@ -549,10 +644,11 @@ def sale_report_pdf(request):
     def draw_invoice_header():
         pdf.set_fill_color(230, 240, 255)
         pdf.set_font("Helvetica", "B", 9)
+        # widths adjusted to include Firm column
         cols = [
-            ("Inv No", 20), ("Date", 22), ("Broker", 40),
-            ("Total", 22), ("Batav", 22), ("DR", 18),
-            ("Other", 18), ("Adv", 18), ("Net", 22),
+            ("Inv No", 16), ("Date", 20), ("Broker", 30), ("Firm", 30),
+            ("Total", 18), ("Batav", 18), ("DR", 14),
+            ("Other", 14), ("Adv", 14), ("Net", 18),
         ]
         for text, w in cols:
             pdf.cell(w, 7, text, border=1, align="C", fill=True)
@@ -583,8 +679,10 @@ def sale_report_pdf(request):
             pdf.set_font("Helvetica", "B", 9)
             if report_type == "date":
                 grp_txt = f"Group: {key[0].strftime('%d-%m-%Y')}"
-            else:
+            elif report_type == "broker":
                 grp_txt = f"Group: {key[0].strftime('%d-%m-%Y')} - {key[1] or 'No Broker'}"
+            else:  # firm grouping
+                grp_txt = f"Group: {key[0].strftime('%d-%m-%Y')} - {key[1] or 'No Firm'}"
             pdf.ln(2)
             pdf.set_fill_color(235, 235, 235)
             pdf.cell(0, 6, grp_txt, ln=1, fill=True)
@@ -592,15 +690,16 @@ def sale_report_pdf(request):
             current_group = key
 
         # invoice header row: text left, numbers right
-        pdf.cell(20, 7, str(s.invno), border=1, align="C")
-        pdf.cell(22, 7, s.invdate.strftime("%d-%m-%Y"), border=1, align="C")
-        pdf.cell(40, 7, (s.broker.brokername if s.broker else "")[:20], border=1, align="L")
-        cellR(22, 7, fmt2(s.totalamt), border=1)
-        cellR(22, 7, fmt2(s.batavamt), border=1)
-        cellR(18, 7, fmt2(s.dramt), border=1)
-        cellR(18, 7, fmt2(s.other), border=1)
-        cellR(18, 7, fmt2(s.advance), border=1)
-        cellR(22, 7, fmt2(s.netamt), border=1)
+        pdf.cell(16, 7, str(s.invno), border=1, align="C")
+        pdf.cell(20, 7, s.invdate.strftime("%d-%m-%Y"), border=1, align="C")
+        pdf.cell(30, 7, (s.broker.brokername if s.broker else "")[:28], border=1, align="L")
+        pdf.cell(30, 7, (s.firm.firmname if getattr(s, "firm", None) else "")[:28], border=1, align="L")
+        cellR(18, 7, fmt2(s.totalamt), border=1)
+        cellR(18, 7, fmt2(s.batavamt), border=1)
+        cellR(14, 7, fmt2(s.dramt), border=1)
+        cellR(14, 7, fmt2(s.other), border=1)
+        cellR(14, 7, fmt2(s.advance), border=1)
+        cellR(18, 7, fmt2(s.netamt), border=1)
         pdf.ln(7)
 
         # details
@@ -654,12 +753,23 @@ def sale_report_pdf(request):
         pdf.cell(0, 6, line, ln=1)
 
     # finalize (bytes -> HttpResponse)
+        # finalize (bytes/str -> HttpResponse) — robust for different fpdf versions
     pdf.alias_nb_pages()
     filename = f"sale_report_{start_date}_{end_date}.pdf"
-    pdf_bytes = pdf.output(dest="S").encode("latin-1", "replace")
+
+    out = pdf.output(dest="S")  # may return str, bytes or bytearray
+    if isinstance(out, str):
+        pdf_bytes = out.encode("latin-1", "replace")
+    elif isinstance(out, bytearray):
+        pdf_bytes = bytes(out)
+    else:
+        # already bytes
+        pdf_bytes = out
+
     resp = HttpResponse(pdf_bytes, content_type="application/pdf")
     resp["Content-Disposition"] = f'inline; filename="{filename}"'
     return resp
+
 
 def sale_search_view(request):
     """
@@ -845,7 +955,12 @@ def purchase_form(request, invno=None):
     # next invoice number — per ORG
     next_invno = PurchaseMaster.objects.filter(org=request.current_org).aggregate(Max("invno"))['invno__max']
     next_invno = (next_invno + 1) if next_invno else 1
-
+    # Firms: try to scope to current_org if Firm has org FK, otherwise return all firms
+    try:
+        # if Firm has 'org' field this will work; otherwise it raises FieldDoesNotExist or similar
+        firms_qs = Firm.objects.filter(org=request.current_org).order_by('firmname')
+    except Exception:
+        firms_qs = Firm.objects.all().order_by('firmname')
     context = {
         "purchase": purchase,
         "purchase_items_json": purchase_items_json,
@@ -855,6 +970,7 @@ def purchase_form(request, invno=None):
         "items": HeadItem.objects.filter(org=request.current_org).order_by('item_name'),
         "parties": HeadParty.objects.filter(org=request.current_org).order_by('partyname'),
         "brokers": Broker.objects.filter(org=request.current_org).order_by('brokername'),
+        "firms": firms_qs,
     }
     return render(request, "brokerapp/purchase.html", context)
 
@@ -877,6 +993,7 @@ def save_purchase(request):
         extra = request.POST.get("extra", "").strip()
         party_pk = request.POST.get("party")
         broker_pk = request.POST.get("broker")
+        firm_pk = request.POST.get("firm")
         vehicleno = request.POST.get("vehicleno", "").strip()
 
         # Items
@@ -906,6 +1023,16 @@ def save_purchase(request):
         # Resolve FKs within same org
         party = get_object_or_404(HeadParty, pk=party_pk, org=request.current_org)
         broker = get_object_or_404(Broker, pk=broker_pk, org=request.current_org)
+        # Firm must belong to same org (if Firm has org FK). If your Firm model isn't org-scoped,
+        # remove the org=... kwarg below.
+        # Resolve Firm. If Firm model has an 'org' FK, scope by current_org; otherwise resolve by pk only.
+        firm = None
+        if firm_pk:
+            firm_fields = [f.name for f in Firm._meta.get_fields()]
+            if 'org' in firm_fields:
+                firm = get_object_or_404(Firm, pk=firm_pk, org=request.current_org)
+            else:
+                firm = get_object_or_404(Firm, pk=firm_pk)
 
         # Create master (bind org + created_by)
         purchase = PurchaseMaster.objects.create(
@@ -915,6 +1042,7 @@ def save_purchase(request):
             awakno=awakno,
             party=party,
             broker=broker,
+            firm=firm,
             vehicleno=vehicleno,
             extra=extra,
             totalamt=total_amt.quantize(Decimal('0.01')),
@@ -1008,6 +1136,15 @@ def update_purchase(request, invno):
         # Resolve FKs in same org
         party = get_object_or_404(HeadParty, pk=party_pk, org=request.current_org)
         broker = get_object_or_404(Broker, pk=broker_pk, org=request.current_org)
+        firm_pk = request.POST.get("firm")
+        # Resolve Firm safely: only include org= when the Firm model actually has that field.
+        firm = None
+        if firm_pk:
+            firm_fields = [f.name for f in Firm._meta.get_fields()]
+            if 'org' in firm_fields:
+                firm = get_object_or_404(Firm, pk=firm_pk, org=request.current_org)
+            else:
+                firm = get_object_or_404(Firm, pk=firm_pk)
 
         # Update master
         purchase.invdate = invdate
@@ -1305,6 +1442,66 @@ def broker_delete(request, pk):
 
     return redirect('broker')
 
+def firm_view(request, pk=None):
+    """
+    Manage firms. Supports `?next=sale|purchase|daily` to return to calling form after save.
+    """
+    form = FirmForm()
+    firms = Firm.objects.all().order_by("firmname")
+
+    if request.method == 'POST':
+        form = FirmForm(request.POST)
+
+        if request.POST.get('action') == 'save':
+            if form.is_valid():
+                # keep behavior similar to other masters: allow attaching org if present
+                obj = form.save(commit=False)
+                if hasattr(obj, 'org') and getattr(request, 'current_org', None) is not None:
+                    obj.org = request.current_org
+                obj.save()
+
+                messages.success(request, "Firm saved successfully!")
+
+                # check return target
+                next_page = request.GET.get('next')
+                if next_page == 'sale':
+                    return redirect(reverse('sale_form_new'))
+                elif next_page == 'purchase':
+                    return redirect(reverse('purchase_form_new'))
+                elif next_page == 'daily':
+                    return redirect(reverse('daily_page'))
+
+                # default: stay on firm list but provide created_id/name for JS
+                created_name = getattr(obj, 'firmname', getattr(obj, 'name', ''))
+                return redirect(f"{reverse('firm')}?created_id={obj.pk}&created_name={quote(created_name)}")
+
+        elif request.POST.get('action') == 'delete':
+            name = request.POST.get('firmname') or request.POST.get('firm')
+            if not name:
+                messages.error(request, "No firm specified to delete.")
+                return redirect('firm')
+
+            try:
+                obj = Firm.objects.get(firmname=name)
+                obj.delete()
+                messages.success(request, "Firm deleted successfully!")
+                return redirect('firm')
+            except Firm.DoesNotExist:
+                messages.error(request, "Firm not found!")
+
+    return render(request, 'brokerapp/firm.html', {
+        'form': form,
+        'firms': firms
+    })
+
+
+
+@require_POST
+def firm_delete(request, pk):
+    firm = get_object_or_404(Firm, pk=pk)
+    firm.delete()
+    messages.success(request, f"✅ Firm '{pk}' deleted.")
+    return redirect(reverse('firm_list'))
 
 @login_required
 def dashboard(request):
@@ -1398,9 +1595,19 @@ def daily_page_view(request):
     else:
         selected_date = timezone.localdate()
 
-    # Only current org data
+    # Only current org choices
     parties = HeadParty.objects.filter(org=request.current_org).order_by('partyname')
     brokers = Broker.objects.filter(org=request.current_org).order_by('brokername')
+
+    # Firms for dropdown (scope to org if Firm has org FK, otherwise use all)
+    try:
+        firm_field_names = [f.name for f in Firm._meta.get_fields()]
+        if 'org' in firm_field_names:
+            firms = Firm.objects.filter(org=request.current_org).order_by('firmname')
+        else:
+            firms = Firm.objects.all().order_by('firmname')
+    except Exception:
+        firms = Firm.objects.all().order_by('firmname')
 
     # DailyPage for current org + selected date
     daily_page = DailyPage.objects.filter(
@@ -1409,12 +1616,32 @@ def daily_page_view(request):
     ).first()
 
     def serialize_entry(e):
-        broker_name = getattr(e.broker, 'brokername', '') if getattr(e, 'broker', None) else ''
-        party_name = getattr(e.party, 'partyname', '') if getattr(e, 'party', None) else ''
+        # party_name (works if e.party is FK or string)
+        party_name = ''
+        if getattr(e, 'party', None):
+            party_name = getattr(getattr(e, 'party', None), 'partyname', None) or getattr(e, 'party', None) or ''
+        else:
+            party_name = getattr(e, 'party_name', '') or ''
+
+        # broker_name (works if e.broker is FK or string)
+        broker_name = ''
+        if getattr(e, 'broker', None):
+            broker_name = getattr(getattr(e, 'broker', None), 'brokername', None) or getattr(e, 'broker', None) or ''
+        else:
+            broker_name = getattr(e, 'broker_name', '') or ''
+
+        # firm_name (works if e.firm is FK or there is a firm_name string field)
+        firm_name = ''
+        if getattr(e, 'firm', None):
+            firm_name = getattr(getattr(e, 'firm', None), 'firmname', None) or getattr(e, 'firm', None) or ''
+        else:
+            firm_name = getattr(e, 'firm_name', '') or ''
+
         return {
             'entry_no': e.entry_no,
             'party_name': party_name,
             'broker_name': broker_name,
+            'firm_name': firm_name,
             'amount': e.amount,
             'remark': e.remark,
         }
@@ -1423,8 +1650,27 @@ def daily_page_view(request):
     naame_entries = []
 
     if daily_page:
-        jama_entries = [serialize_entry(j) for j in daily_page.jama_entries.all()]
-        naame_entries = [serialize_entry(n) for n in daily_page.naame_entries.all()]
+        # Build safe select_related list based on actual fields on the entry model
+        try:
+            jama_model = daily_page.jama_entries.model
+            naame_model = daily_page.naame_entries.model
+
+            def safe_select_qs(qs, model):
+                field_names = [f.name for f in model._meta.get_fields()]
+                rels = [name for name in ('party', 'broker', 'firm') if name in field_names]
+                if rels:
+                    return qs.select_related(*rels).all()
+                return qs.all()
+
+            jama_qs = safe_select_qs(daily_page.jama_entries, jama_model)
+            naame_qs = safe_select_qs(daily_page.naame_entries, naame_model)
+        except Exception:
+            # Fallback: no select_related
+            jama_qs = daily_page.jama_entries.all()
+            naame_qs = daily_page.naame_entries.all()
+
+        jama_entries = [serialize_entry(j) for j in jama_qs]
+        naame_entries = [serialize_entry(n) for n in naame_qs]
 
     no_entries = not (jama_entries or naame_entries)
 
@@ -1432,6 +1678,7 @@ def daily_page_view(request):
         'selected_date': selected_date,
         'parties': parties,
         'brokers': brokers,
+        'firms': firms,
         'jama_entries': jama_entries,
         'naame_entries': naame_entries,
         'no_entries': no_entries,
@@ -1456,27 +1703,62 @@ def daily_page_show(request):
         except ValueError:
             return JsonResponse({'error': 'invalid date format, expected YYYY-MM-DD'}, status=400)
 
-    # ⬇️ scope to current org
+    # scope to current org
     daily_page = DailyPage.objects.filter(org=request.current_org, date=date_obj).first()
 
     def serialize_entry(entry):
-        broker_name = getattr(entry.broker, 'brokername', '') if getattr(entry, 'broker', None) else ''
-        party_name = getattr(entry.party, 'partyname', '') if getattr(entry, 'party', None) else ''
+        # Party
+        if getattr(entry, 'party', None):
+            party_name = getattr(getattr(entry, 'party', None), 'partyname', None) or str(entry.party)
+        else:
+            party_name = getattr(entry, 'party_name', '') or ''
+
+        # Broker
+        if getattr(entry, 'broker', None):
+            broker_name = getattr(getattr(entry, 'broker', None), 'brokername', None) or str(entry.broker)
+        else:
+            broker_name = getattr(entry, 'broker_name', '') or ''
+
+        # Firm (works for FK `firm` or string `firm_name`)
+        if getattr(entry, 'firm', None):
+            firm_name = getattr(getattr(entry, 'firm', None), 'firmname', None) or str(entry.firm)
+        else:
+            firm_name = getattr(entry, 'firm_name', '') or ''
+
         return {
             'entry_no': entry.entry_no,
             'party_name': party_name,
             'broker_name': broker_name,
+            'firm_name': firm_name,
             'amount': float(entry.amount or 0),
             'remark': entry.remark or '',
-            'created_at': entry.created_at.isoformat() if entry.created_at else None,
+            'created_at': entry.created_at.isoformat() if getattr(entry, 'created_at', None) else None,
         }
 
     jama = []
     naame = []
 
     if daily_page:
-        jama = [serialize_entry(j) for j in daily_page.jama_entries.all()]
-        naame = [serialize_entry(n) for n in daily_page.naame_entries.all()]
+        # Build safe select_related based on the actual fields on the entry models
+        try:
+            jama_model = daily_page.jama_entries.model
+            naame_model = daily_page.naame_entries.model
+
+            def safe_qs(qs, model):
+                field_names = [f.name for f in model._meta.get_fields()]
+                rels = [name for name in ('party', 'broker', 'firm') if name in field_names]
+                if rels:
+                    return qs.select_related(*rels).all()
+                return qs.all()
+
+            jama_qs = safe_qs(daily_page.jama_entries, jama_model)
+            naame_qs = safe_qs(daily_page.naame_entries, naame_model)
+        except Exception:
+            jama_qs = daily_page.jama_entries.all()
+            naame_qs = daily_page.naame_entries.all()
+
+        jama = [serialize_entry(j) for j in jama_qs]
+        naame = [serialize_entry(n) for n in naame_qs]
 
     if not jama and not naame:
         return JsonResponse({
@@ -1492,18 +1774,20 @@ def daily_page_show(request):
         'naame': naame,
     })
 
+    
 @require_POST
 
 def daily_page_jama_add(request):
-    # expects: date, party (pk), broker (pk), amount, remark (optional)
+    # expects: date, party (pk), broker (pk), firm (pk, optional), amount, remark (optional)
     date_str = request.POST.get('date')
     party_id = request.POST.get('party')
     broker_id = request.POST.get('broker')
+    firm_id = request.POST.get('firm')   # NEW: optional
     amount = request.POST.get('amount')
     remark = (request.POST.get('remark') or '').strip()
 
-    if not (date_str and party_id and broker_id and amount):
-        return JsonResponse({'error': 'Missing fields'}, status=400)
+    if not (date_str and party_id and amount):
+        return JsonResponse({'error': 'Missing required fields (date/party/amount)'}, status=400)
 
     try:
         date_obj = datetime.strptime(date_str, '%Y-%m-%d').date()
@@ -1511,25 +1795,61 @@ def daily_page_jama_add(request):
     except Exception:
         return JsonResponse({'error': 'Invalid input'}, status=400)
 
-    # ⬇️ Party/Broker must belong to current org
+    # Party/Broker must belong to current org (broker optional if your UI allows blank)
     party = get_object_or_404(HeadParty, pk=party_id, org=request.current_org)
-    broker = get_object_or_404(Broker, pk=broker_id, org=request.current_org)
+    broker = None
+    if broker_id:
+        broker = get_object_or_404(Broker, pk=broker_id, org=request.current_org)
+
+    # Resolve firm (optional). Be defensive: Firm model may or may not have 'org' field.
+    firm_obj = None
+    firm_name_text = ''
+    if firm_id:
+        try:
+            firm_field_names = [f.name for f in Firm._meta.get_fields()]
+            if 'org' in firm_field_names:
+                firm_obj = get_object_or_404(Firm, pk=firm_id, org=request.current_org)
+            else:
+                firm_obj = get_object_or_404(Firm, pk=firm_id)
+            firm_name_text = getattr(firm_obj, 'firmname', str(firm_obj))
+        except Exception:
+            firm_obj = None
+            firm_name_text = firm_id  # fallback to posted value
 
     with transaction.atomic():
-        # ⬇️ DailyPage is per (org, date)
+        # DailyPage is per (org, date)
         daily_page, _ = DailyPage.objects.get_or_create(org=request.current_org, date=date_obj)
-        entry = JamaEntry.objects.create(
-            daily_page=daily_page,
-            party=party,
-            broker=broker,
-            amount=amt,
-            remark=remark
-        )
+
+        # Prepare entry kwargs dynamically (support both FK 'firm' or string 'firm_name')
+        entry_kwargs = {
+            'daily_page': daily_page,
+            'party': party,
+            'amount': amt,
+            'remark': remark,
+        }
+        if broker is not None:
+            entry_kwargs['broker'] = broker
+
+        # Detect JamaEntry fields
+        try:
+            entry_field_names = [f.name for f in JamaEntry._meta.get_fields()]
+        except Exception:
+            entry_field_names = []
+
+        if firm_id:
+            if 'firm' in entry_field_names:
+                entry_kwargs['firm'] = firm_obj  # may be None if resolution failed
+            elif 'firm_name' in entry_field_names:
+                entry_kwargs['firm_name'] = firm_name_text
+            # otherwise ignore if neither field present
+
+        entry = JamaEntry.objects.create(**entry_kwargs)
 
     data = {
         'entry_no': entry.entry_no,
         'party_name': party.partyname,
-        'broker_name': broker.brokername,
+        'broker_name': broker.brokername if broker else '',
+        'firm_name': firm_name_text,
         'amount': f"{entry.amount:.2f}",
         'remark': entry.remark,
     }
@@ -1539,15 +1859,16 @@ def daily_page_jama_add(request):
 @require_POST
 
 def daily_page_naame_add(request):
-    # expects: date, party (pk), broker (pk), amount, remark (optional)
+    # expects: date, party (pk), broker (pk), firm (pk, optional), amount, remark (optional)
     date_str = request.POST.get('date')
     party_id = request.POST.get('party')
     broker_id = request.POST.get('broker')
+    firm_id = request.POST.get('firm')   # NEW: optional
     amount = request.POST.get('amount')
     remark = (request.POST.get('remark') or '').strip()
 
-    if not (date_str and party_id and broker_id and amount):
-        return JsonResponse({'error': 'Missing fields'}, status=400)
+    if not (date_str and party_id and amount):
+        return JsonResponse({'error': 'Missing required fields (date/party/amount)'}, status=400)
 
     try:
         date_obj = datetime.strptime(date_str, '%Y-%m-%d').date()
@@ -1555,52 +1876,197 @@ def daily_page_naame_add(request):
     except Exception:
         return JsonResponse({'error': 'Invalid input'}, status=400)
 
-    # ⬇️ scoped lookups
+    # Scoped lookups
     party = get_object_or_404(HeadParty, pk=party_id, org=request.current_org)
-    broker = get_object_or_404(Broker, pk=broker_id, org=request.current_org)
+    broker = None
+    if broker_id:
+        broker = get_object_or_404(Broker, pk=broker_id, org=request.current_org)
+
+    # Resolve firm (optional) - defensive about Firm model shape
+    firm_obj = None
+    firm_name_text = ''
+    if firm_id:
+        try:
+            firm_field_names = [f.name for f in Firm._meta.get_fields()]
+            if 'org' in firm_field_names:
+                firm_obj = get_object_or_404(Firm, pk=firm_id, org=request.current_org)
+            else:
+                firm_obj = get_object_or_404(Firm, pk=firm_id)
+            firm_name_text = getattr(firm_obj, 'firmname', str(firm_obj))
+        except Exception:
+            firm_obj = None
+            firm_name_text = firm_id
 
     with transaction.atomic():
         daily_page, _ = DailyPage.objects.get_or_create(org=request.current_org, date=date_obj)
-        entry = NaameEntry.objects.create(
-            daily_page=daily_page,
-            party=party,
-            broker=broker,
-            amount=amt,
-            remark=remark
-        )
+
+        entry_kwargs = {
+            'daily_page': daily_page,
+            'party': party,
+            'amount': amt,
+            'remark': remark,
+        }
+        if broker is not None:
+            entry_kwargs['broker'] = broker
+
+        # Detect NaameEntry fields (support FK 'firm' or string 'firm_name')
+        try:
+            entry_field_names = [f.name for f in NaameEntry._meta.get_fields()]
+        except Exception:
+            entry_field_names = []
+
+        if firm_id:
+            if 'firm' in entry_field_names:
+                entry_kwargs['firm'] = firm_obj
+            elif 'firm_name' in entry_field_names:
+                entry_kwargs['firm_name'] = firm_name_text
+
+        entry = NaameEntry.objects.create(**entry_kwargs)
 
     data = {
         'entry_no': entry.entry_no,
         'party_name': party.partyname,
-        'broker_name': broker.brokername,
+        'broker_name': broker.brokername if broker else '',
+        'firm_name': firm_name_text,
         'amount': f"{entry.amount:.2f}",
         'remark': entry.remark,
     }
     return JsonResponse({'success': True, 'entry': data})
 
 @require_POST
-
 def daily_page_jama_delete(request, entry_no):
     entry = get_object_or_404(JamaEntry, entry_no=entry_no, daily_page__org=request.current_org)
     entry.delete()
     return JsonResponse({'success': True, 'entry_no': entry_no})
 
-
 @require_POST
+def daily_page_jama_update(request):
+    entry_no = request.POST.get("entry_no")
+    if not entry_no:
+        return JsonResponse({"error": "entry_no required"}, status=400)
 
+    entry = get_object_or_404(JamaEntry, entry_no=entry_no, daily_page__org=request.current_org)
+
+    try:
+        with transaction.atomic():
+            # basic fields
+            if request.POST.get("amount") not in (None, ''):
+                entry.amount = request.POST.get("amount")
+            entry.remark = request.POST.get("remark", "") or ""
+
+            # party: if user supplied text, store into party_name and clear FK; if they selected FK (id), try to set FK
+            party_val = request.POST.get("party")
+            # if the select in your template sends a partyname string (not id), we treat it as text
+            # if you later change frontend to send party_id, adapt here.
+            if party_val:
+                # if front-end sends the partyname string (as earlier), store it in party_name and clear FK:
+                entry.party_name = party_val
+                entry.party = None
+            # broker: treat as name string (same approach)
+            broker_val = request.POST.get("broker")
+            if broker_val:
+                entry.broker = None
+                # ensure text fallback (broker name field may be named differently in models — using broker_name if present)
+                if hasattr(entry, 'broker_name'):
+                    entry.broker_name = broker_val
+                elif hasattr(entry, 'brokername'):
+                    entry.brokername = broker_val
+
+            # firm: accept id or textual; try to treat as id first
+            firm_val = request.POST.get("firm")
+            if firm_val:
+                try:
+                    entry.firm_id = int(firm_val)
+                    # refresh firm_name from FK if available
+                    entry.firm_name = getattr(entry.firm, 'firmname', '') or entry.firm_name
+                except Exception:
+                    entry.firm = None
+                    entry.firm_id = None
+                    entry.firm_name = firm_val or entry.firm_name
+
+            entry.save()
+    except Exception as exc:
+        return JsonResponse({"error": "exception saving entry: " + str(exc)}, status=500)
+
+    return JsonResponse({
+        "success": True,
+        "entry": {
+            "entry_no": entry.entry_no,
+            "amount": str(entry.amount),
+            "party_name": entry.party_name or "",
+            "broker_name": getattr(entry, 'broker_name', '') or "",
+            "firm_name": entry.firm_name or "",
+            "remark": entry.remark or "",
+        }
+    })
+
+    
+@require_POST
 def daily_page_naame_delete(request, entry_no):
     entry = get_object_or_404(NaameEntry, entry_no=entry_no, daily_page__org=request.current_org)
     entry.delete()
     return JsonResponse({'success': True, 'entry_no': entry_no})
 
 
+@require_POST
+def daily_page_naame_update(request):
+    entry_no = request.POST.get("entry_no")
+    if not entry_no:
+        return JsonResponse({"error": "entry_no required"}, status=400)
 
+    entry = get_object_or_404(NaameEntry, entry_no=entry_no, daily_page__org=request.current_org)
+
+    try:
+        with transaction.atomic():
+            if request.POST.get("amount") not in (None, ''):
+                entry.amount = request.POST.get("amount")
+            entry.remark = request.POST.get("remark", "") or ""
+
+            party_val = request.POST.get("party")
+            if party_val:
+                entry.party_name = party_val
+                entry.party = None
+
+            broker_val = request.POST.get("broker")
+            if broker_val:
+                entry.broker = None
+                if hasattr(entry, 'broker_name'):
+                    entry.broker_name = broker_val
+                elif hasattr(entry, 'brokername'):
+                    entry.brokername = broker_val
+
+            firm_val = request.POST.get("firm")
+            if firm_val:
+                try:
+                    entry.firm_id = int(firm_val)
+                    entry.firm_name = getattr(entry.firm, 'firmname', '') or entry.firm_name
+                except Exception:
+                    entry.firm = None
+                    entry.firm_id = None
+                    entry.firm_name = firm_val or entry.firm_name
+
+            entry.save()
+    except Exception as exc:
+        return JsonResponse({"error": "exception saving entry: " + str(exc)}, status=500)
+
+    return JsonResponse({
+        "success": True,
+        "entry": {
+            "entry_no": entry.entry_no,
+            "amount": str(entry.amount),
+            "party_name": entry.party_name or "",
+            "broker_name": getattr(entry, 'broker_name', '') or "",
+            "firm_name": entry.firm_name or "",
+            "remark": entry.remark or "",
+        }
+    })
+    
 def daily_page_pdf(request):
     date = request.GET.get('date')
     if not date:
         return HttpResponse("Date not provided", status=400)
 
-    # Query entries
+    # Query entries (keeps original filtering by date)
     jama_entries = list(JamaEntry.objects.filter(daily_page__date=date).order_by('entry_no'))
     naame_entries = list(NaameEntry.objects.filter(daily_page__date=date).order_by('entry_no'))
 
@@ -1617,22 +2083,32 @@ def daily_page_pdf(request):
     pdf.ln(6)
 
     # Column layout (left and right table)
-    # A4 landscape usable width ~= 277mm (after small margins). We'll split into two panels.
     left_x = 12
     right_x = 12 + 137 + 8  # left panel width + small gap
     panel_width = 137  # width for each table panel
 
     # Column widths inside a panel (sum <= panel_width)
-    # no, party, broker, amount, remark
+    # no, party, broker, firm, amount, remark
     w_no = 10
-    w_party = 48
-    w_broker = 38
-    w_amount = 22
-    w_remark = panel_width - (w_no + w_party + w_broker + w_amount)  # remaining
+    w_party = 40
+    w_broker = 30
+    w_firm = 25
+    w_amount = 20
+    w_remark = panel_width - (w_no + w_party + w_broker + w_firm + w_amount)
 
     # Header row height
     hdr_h = 8
     row_h = 8
+
+    # Helper: safe text for party/broker/firm (handles FK or stored-name)
+    def txt_party(e):
+        return getattr(getattr(e, 'party', None), 'partyname', None) or getattr(e, 'party_name', None) or (str(e.party) if getattr(e, 'party', None) else '')
+
+    def txt_broker(e):
+        return getattr(getattr(e, 'broker', None), 'brokername', None) or getattr(e, 'broker_name', None) or (str(e.broker) if getattr(e, 'broker', None) else '')
+
+    def txt_firm(e):
+        return getattr(getattr(e, 'firm', None), 'firmname', None) or getattr(e, 'firm_name', None) or (str(e.firm) if getattr(e, 'firm', None) else '')
 
     # Function to draw a single panel (list of entries)
     def draw_panel(x, y, title, entries):
@@ -1646,6 +2122,7 @@ def daily_page_pdf(request):
         pdf.cell(w_no, hdr_h, "No", border=1, align="C")
         pdf.cell(w_party, hdr_h, "Party", border=1, align="L")
         pdf.cell(w_broker, hdr_h, "Broker", border=1, align="L")
+        pdf.cell(w_firm, hdr_h, "Firm", border=1, align="L")
         pdf.cell(w_amount, hdr_h, "Amount", border=1, align="R")
         pdf.cell(w_remark, hdr_h, "Remark", border=1, align="L")
         pdf.ln(hdr_h)
@@ -1653,42 +2130,41 @@ def daily_page_pdf(request):
         # rows
         pdf.set_font("Arial", "", 10)
         for e in entries:
-            # ensure we don't go beyond bottom margin - FPDF auto-adds page if needed
             pdf.set_x(x)
             pdf.cell(w_no, row_h, str(e.entry_no), border=1)
             # party (truncate if too long)
-            party_text = getattr(e.party, "partyname", str(e.party) if e.party else "")
-            if len(party_text) > 35:
-                party_text = party_text[:32] + "..."
+            party_text = txt_party(e) or ""
+            if len(party_text) > 30:
+                party_text = party_text[:27] + "..."
             pdf.cell(w_party, row_h, party_text, border=1)
             # broker
-            broker_text = getattr(e.broker, "brokername", str(e.broker) if e.broker else "")
-            if len(broker_text) > 30:
-                broker_text = broker_text[:27] + "..."
+            broker_text = txt_broker(e) or ""
+            if len(broker_text) > 25:
+                broker_text = broker_text[:22] + "..."
             pdf.cell(w_broker, row_h, broker_text, border=1)
+            # firm
+            firm_text = txt_firm(e) or ""
+            if len(firm_text) > 25:
+                firm_text = firm_text[:22] + "..."
+            pdf.cell(w_firm, row_h, firm_text, border=1)
             # amount (right aligned)
             pdf.cell(w_amount, row_h, f"{float(e.amount or 0):.2f}", border=1, align="R")
             # remark - truncate
             remark_text = (e.remark or "")
-            if len(remark_text) > 40:
-                remark_text = remark_text[:37] + "..."
+            if len(remark_text) > 30:
+                remark_text = remark_text[:27] + "..."
             pdf.cell(w_remark, row_h, remark_text, border=1)
             pdf.ln(row_h)
 
-        # after rows: draw total under Amount column (aligned under amount cell)
-        # Move to the footer row position (we'll draw a row showing 'Total' in the left columns and value under Amount)
+        # Totals row
         pdf.set_x(x)
-        # create a cell spanning no+party+broker widths with label 'Total'
-        span_width = w_no + w_party + w_broker
+        span_width = w_no + w_party + w_broker + w_firm
         pdf.set_font("Arial", "B", 10)
         pdf.cell(span_width, hdr_h, "Total", border='T')
-        # amount cell with top border
-        # compute the total for this panel
         panel_total = sum(float(ent.amount or 0) for ent in entries)
         pdf.cell(w_amount, hdr_h, f"{panel_total:.2f}", border='T', align="R")
-        # empty remark cell
         pdf.cell(w_remark, hdr_h, "", border='T')
-        pdf.ln(hdr_h + 4)  # small gap after table
+        pdf.ln(hdr_h + 4)
 
     # Draw both panels side-by-side starting from current y
     start_y = pdf.get_y()
@@ -1697,17 +2173,14 @@ def daily_page_pdf(request):
 
     # Summary line (below panels)
     pdf.set_font("Arial", "B", 12)
-    # Put jama total on left area
     pdf.set_xy(left_x, pdf.get_y())
     pdf.cell(120, 8, f"Jama Total: {total_jama:.2f}", ln=0)
-    # Put naame total on right area
-    # place it roughly under right panel
     pdf.set_xy(right_x, pdf.get_y())
     pdf.cell(120, 8, f"Naame Total: {total_naame:.2f}", ln=0)
     pdf.ln(10)
+
     # Difference on the right aligned
     pdf.set_font("Arial", "B", 12)
-    # align right towards page right margin
     page_right = pdf.w - 12
     diff_text = f"Difference (Jama - Naame): {diff:.2f}"
     text_width = pdf.get_string_width(diff_text) + 2
@@ -1719,6 +2192,7 @@ def daily_page_pdf(request):
     response = HttpResponse(pdf_bytes, content_type='application/pdf')
     response['Content-Disposition'] = f'attachment; filename="DailyReport_{date}.pdf"'
     return response
+
 
 
 
@@ -2025,7 +2499,7 @@ class PartyStatementView(TemplateView):
                 wb = Workbook()
                 ws = wb.active
                 ws.title = "Party Statement"
-                headers = ["Entry No", "Date", "Debit", "Credit", "Remark", "Balance"]
+                headers = ["Entry No", "Date", "Debit", "Credit", "Firm", "Remark", "Balance"]
                 ws.append(headers)
                 for e in entries:
                     ws.append([
@@ -2033,6 +2507,7 @@ class PartyStatementView(TemplateView):
                         e["date"].strftime("%Y-%m-%d") if e["date"] else "",
                         float(e.get("debit") or 0),
                         float(e.get("credit") or 0),
+                        e.get("firm_name") or "",
                         e.get("remark") or "",
                         float(e.get("balance") or 0),
                     ])
@@ -2085,8 +2560,8 @@ class PartyStatementView(TemplateView):
                 pdf.cell(0, 6, safe_text(f"Generated on: {date.today().strftime('%d-%m-%Y')}", 80), ln=True, align="C")
                 pdf.ln(4)
 
-                headers = ["Entry No", "Date", "Debit", "Credit", "Remark", "Balance"]
-                widths = [22, 22, 28, 28, 60, 30]
+                headers = ["Entry No", "Date", "Debit", "Credit", "Firm", "Remark", "Balance"]
+                widths = [20, 22, 24, 24, 30, 60, 26]
                 pdf.set_font("Helvetica", "B", 9)
                 for i, h in enumerate(headers):
                     pdf.cell(widths[i], 8, safe_text(h, 40), border=1, align="C")
@@ -2099,6 +2574,7 @@ class PartyStatementView(TemplateView):
                         safe_text(e["date"].strftime("%Y-%m-%d") if e["date"] else "", 20),
                         safe_text(f"{(e.get('debit') or Decimal('0')):.2f}", 20),
                         safe_text(f"{(e.get('credit') or Decimal('0')):.2f}", 20),
+                        safe_text(e.get("firm_name", ""), 28),
                         safe_text(e.get("remark", ""), 120),
                         safe_text(f"{(e.get('balance') or Decimal('0')):.2f}", 20),
                     ]
@@ -2129,32 +2605,66 @@ class PartyStatementView(TemplateView):
     # ---------- helper ----------
     def _build_entries(self, head):
         entries = []
+        
+        # helper: safely get firm label from different models
+        def firm_label_from(obj):
+            # try firm_name field
+            name = getattr(obj, "firm_name", "") or ""
+            firm_obj = getattr(obj, "firm", None)
+            if not name and firm_obj:
+                name = getattr(firm_obj, "firmname", str(firm_obj))
+            return name or ""
+        
         if getattr(head, "openingdebit", None) and head.openingdebit != Decimal("0"):
-            entries.append({"entry_no": "OPEN", "date": None,
-                            "debit": head.openingdebit, "credit": Decimal("0"),
-                            "remark": "Opening (Dr)"})
+            entries.append({"entry_no": "OPEN", 
+                            "date": None,
+                            "debit": head.openingdebit,
+                            "credit": Decimal("0"),
+                            "remark": "Opening (Dr)",
+                            "firm_name": "",
+                        })
         elif getattr(head, "openingcredit", None) and head.openingcredit != Decimal("0"):
-            entries.append({"entry_no": "OPEN", "date": None,
-                            "debit": Decimal("0"), "credit": head.openingcredit,
-                            "remark": "Opening (Cr)"})
+            entries.append({"entry_no": "OPEN", 
+                            "date": None,
+                            "debit": Decimal("0"), 
+                            "credit": head.openingcredit,
+                            "remark": "Opening (Cr)",
+                            "firm_name": "",
+                        })
 
         for s in SaleMaster.objects.filter(party=head).order_by("invdate"):
-            entries.append({"entry_no": s.invno, "date": s.invdate,
-                            "debit": s.netamt, "credit": Decimal("0"),
-                            "remark": s.remark or f"Sale Inv#{s.invno}"})
+            entries.append({"entry_no": s.invno, 
+                            "date": s.invdate,
+                            "debit": s.netamt, 
+                            "credit": Decimal("0"),
+                            "remark": s.remark or f"Sale Inv#{s.invno}",
+                            "firm_name": firm_label_from(s),
+                           })
         for p in PurchaseMaster.objects.filter(party=head).order_by("invdate"):
-            entries.append({"entry_no": p.invno, "date": p.invdate,
-                            "debit": Decimal("0"), "credit": p.netamt,
-                            "remark": p.remark or f"Purchase Inv#{p.invno}"})
+            entries.append({"entry_no": p.invno,
+                            "date": p.invdate,
+                            "debit": Decimal("0"),
+                            "credit": p.netamt,
+                            "remark": p.remark or f"Purchase Inv#{p.invno}",
+                            "firm_name": firm_label_from(p),
+                        })
         for n in NaameEntry.objects.filter(party=head).order_by('daily_page__date'):
-            entries.append({"entry_no": n.entry_no, "date": n.daily_page.date,
-                            "debit": n.amount, "credit": Decimal("0"),
-                            "remark": n.remark or "Naame"})
+            entries.append({"entry_no": n.entry_no,
+                            "date": n.daily_page.date,
+                            "debit": n.amount, 
+                            "credit": Decimal("0"),
+                            "remark": n.remark or "Naame",
+                            "firm_name": firm_label_from(n),
+                          })
         for j in JamaEntry.objects.filter(party=head).order_by('daily_page__date'):
-            entries.append({"entry_no": j.entry_no, "date": j.daily_page.date,
-                            "debit": Decimal("0"), "credit": j.amount,
-                            "remark": j.remark or "Jama"})
-
+            entries.append({"entry_no": j.entry_no, 
+                            "date": j.daily_page.date,
+                            "debit": Decimal("0"), 
+                            "credit": j.amount,
+                            "remark": j.remark or "Jama",
+                            "firm_name": firm_label_from(j),
+                        })
+        # sort + totals + running balance
         entries = sorted(entries, key=lambda x: (x["date"] is None, x["date"] or ""))
         total_debit = sum(e["debit"] for e in entries)
         total_credit = sum(e["credit"] for e in entries)

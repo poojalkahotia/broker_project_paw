@@ -30,6 +30,13 @@ class Broker(models.Model):
 
     def __str__(self):
         return self.brokername
+
+class Firm(models.Model):
+    # single field, primary key as requested
+    firmname = models.CharField(max_length=100, primary_key=True)
+
+    def __str__(self):
+        return self.firmname
     
 class HeadItem(models.Model):
     item_name = models.CharField(max_length=100, primary_key=True)
@@ -46,7 +53,7 @@ class SaleMaster(models.Model):
 
     party = models.ForeignKey("HeadParty", on_delete=models.CASCADE)
     broker = models.ForeignKey("Broker", on_delete=models.CASCADE)
-
+    firm = models.ForeignKey("Firm", on_delete=models.CASCADE, null=True, blank=True)
     # NEW field after party, broker
     extra = models.CharField(max_length=255, blank=True, null=True)
 
@@ -119,7 +126,7 @@ class PurchaseMaster(models.Model):
 
     party = models.ForeignKey("HeadParty", on_delete=models.CASCADE)
     broker = models.ForeignKey("Broker", on_delete=models.CASCADE)
-
+    firm = models.ForeignKey("Firm", on_delete=models.CASCADE, null=True, blank=True)
     # NEW field after party, broker
     extra = models.CharField(max_length=255, blank=True, null=True)
 
@@ -189,33 +196,53 @@ class DailyPage(models.Model):
 class JamaEntry(models.Model):
     entry_no = models.AutoField(primary_key=True)
     daily_page = models.ForeignKey(DailyPage, on_delete=models.CASCADE, related_name='jama_entries')
-    party = models.ForeignKey('HeadParty', on_delete=models.PROTECT, db_column='partyname')
-    broker = models.ForeignKey(Broker, on_delete=models.PROTECT, blank=True, null=True)  # new field
+
+    # make FK nullable, keep column name partyname, add textual fallback
+    party = models.ForeignKey('HeadParty', on_delete=models.PROTECT, db_column='partyname',
+                              blank=True, null=True)
+    party_name = models.CharField(max_length=200, blank=True, default='')
+
+    broker = models.ForeignKey(Broker, on_delete=models.PROTECT, blank=True, null=True)
+
+    # firm: store FK + textual fallback
+    firm = models.ForeignKey('Firm', on_delete=models.PROTECT, blank=True, null=True)
+    firm_name = models.CharField(max_length=100, blank=True, default='')
+
     amount = models.DecimalField(max_digits=14, decimal_places=2)
-    remark = models.CharField(max_length=255, blank=True)
+    remark = models.CharField(max_length=255, blank=True, default='')
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         ordering = ['entry_no']
 
     def __str__(self):
-        return f"Jama #{self.entry_no} - {self.party} - {self.broker} - {self.amount}"
-
+        party_display = self.party_name or (getattr(self.party, 'partyname', '') if self.party else '')
+        return f"Jama #{self.entry_no} - {party_display} - {self.broker} - {self.amount}"
+ 
 
 class NaameEntry(models.Model):
     entry_no = models.AutoField(primary_key=True)
     daily_page = models.ForeignKey(DailyPage, on_delete=models.CASCADE, related_name='naame_entries')
-    party = models.ForeignKey('HeadParty', on_delete=models.PROTECT, db_column='partyname')
-    broker = models.ForeignKey(Broker, on_delete=models.PROTECT, blank=True, null=True)  # new field
+
+    party = models.ForeignKey('HeadParty', on_delete=models.PROTECT, db_column='partyname',
+                              blank=True, null=True)
+    party_name = models.CharField(max_length=200, blank=True, default='')
+
+    broker = models.ForeignKey(Broker, on_delete=models.PROTECT, blank=True, null=True)
+
+    firm = models.ForeignKey('Firm', on_delete=models.PROTECT, blank=True, null=True)
+    firm_name = models.CharField(max_length=100, blank=True, default='')
+
     amount = models.DecimalField(max_digits=14, decimal_places=2)
-    remark = models.CharField(max_length=255, blank=True)
+    remark = models.CharField(max_length=255, blank=True, default='')
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         ordering = ['entry_no']
 
     def __str__(self):
-        return f"Naame #{self.entry_no} - {self.party} - {self.broker} - {self.amount}"
+        party_display = self.party_name or (getattr(self.party, 'partyname', '') if self.party else '')
+        return f"Naame #{self.entry_no} - {party_display} - {self.broker} - {self.amount}"
 
 class Organization(models.Model):
 

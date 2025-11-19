@@ -11,7 +11,8 @@
                     <th>Invoice No</th>
                     <th>Invoice Date</th>
                     <th>Party Name</th>
-                    <th>Amount</th>
+                    <th>Firm</th>
+                    <th class="text-end">Amount</th>
                     <th>Actions</th>
                 </tr>
             </thead>
@@ -19,16 +20,29 @@
                 {% for sale in sales %}
                 <tr>
                     <td>{{ sale.invno }}</td>
-                    <td>{{ sale.invdate }}</td>
+                    <td>{{ sale.invdate|date:"M. j, Y" }}</td>
                     <td>{{ sale.party.partyname }}</td>
-                    <td>{{ sale.netamt }}</td>
-                    <td>
-                        <a href="{% url 'sale_form_update' sale.invno %}" class="btn btn-warning">UPDATE</a>
-                        <a href="{% url 'delete_sale' sale.invno %}" class="btn btn-danger" onclick="return confirm('Are you sure you want to delete this sale?');">DELETE</a>
-                        
 
+                    <!-- Firm cell (null-safe) -->
+                    <td>
+                        {% if sale.firm %}
+                            {{ sale.firm.firmname }}
+                        {% else %}
+                            —
+                        {% endif %}
                     </td>
+
+                    <td class="text-end">{{ sale.netamt|floatformat:2 }}</td>
+
+                    <td>
+                        <a href="{% url 'sale_form_update' sale.invno %}" class="btn btn-warning btn-sm me-1">UPDATE</a>
+                        <a href="{% url 'delete_sale' sale.invno %}" class="btn btn-danger btn-sm"
+                           onclick="return confirm('Are you sure you want to delete this sale?');">DELETE</a>
                     </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" class="text-center text-muted">No sales found.</td>
                 </tr>
                 {% endfor %}
             </tbody>

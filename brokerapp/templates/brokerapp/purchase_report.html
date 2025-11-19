@@ -34,6 +34,22 @@
         </select>
       </div>
 
+      <!-- OPTIONAL: Firm Filter -->
+      {# Uncomment if you want firm filter #}
+      {#
+      <div class="col-md-3 col-sm-6">
+        <label class="form-label">Firm</label>
+        <select name="firm" class="form-select form-select-sm">
+          <option value="all">All</option>
+          {% for f in firms %}
+            <option value="{{ f.firmname }}" {% if selected_firm == f.firmname %}selected{% endif %}>
+              {{ f.firmname }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+      #}
+
       <div class="col-md-3 col-sm-6">
         <label class="form-label">Report Type</label>
         <select name="report_type" class="form-select form-select-sm" onchange="this.form.submit()">
@@ -63,6 +79,7 @@
                 <th>Invoice No</th>
                 <th>Invoice Date</th>
                 <th>Broker</th>
+                <th>Firm</th>       <!-- ✅ Added Firm column -->
                 <th>Total Amt</th>
                 <th>Batav Amt</th>
                 <th>DR Amt</th>
@@ -79,6 +96,16 @@
                 <td>{{ p.invno }}</td>
                 <td>{{ p.invdate|date:"d-m-Y" }}</td>
                 <td>{{ p.broker.brokername }}</td>
+
+                <!-- ✅ FIRM VALUE -->
+                <td>
+                  {% if p.firm %}
+                    {{ p.firm.firmname }}
+                  {% else %}
+                    —
+                  {% endif %}
+                </td>
+
                 <td>{{ p.totalamt|floatformat:2 }}</td>
                 <td>{{ p.batavamt|floatformat:2 }}</td>
                 <td>{{ p.dramt|floatformat:2 }}</td>
@@ -93,7 +120,7 @@
             <!-- Group Totals -->
             <tfoot class="table-secondary fw-bold">
               <tr>
-                <td colspan="3" class="text-end">Group Totals:</td>
+                <td colspan="4" class="text-end">Group Totals:</td>
                 <td>{{ group.totals.total_totalamt|floatformat:2 }}</td>
                 <td>{{ group.totals.total_batavamt|floatformat:2 }}</td>
                 <td>{{ group.totals.total_dramt|floatformat:2 }}</td>

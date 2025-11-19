@@ -59,10 +59,10 @@
             </div>
         </div>
 
-        <!-- Party + Broker + Extra Section -->
+        <!-- Party + Broker + Firm + Extra Section -->
         <div class="row mt-3 align-items-center">
             <!-- Party -->
-            <div class="col-md-4">
+            <div class="col-md-3">
                 <div class="d-flex align-items-center mb-2">
                     <label class="form-label me-2 mb-0" style="width: 80px;">
                         <a href="{% url 'party_create' %}?next=sale" title="Open Party (return to Sale after save)" style="text-decoration:none; color:#0b3d91;">
@@ -86,7 +86,7 @@
             </div>
 
             <!-- Broker (same flow as Party: returns to Sale after save) -->
-            <div class="col-md-4">
+            <div class="col-md-3">
                 <div class="d-flex align-items-center mb-2">
                     <label class="form-label me-2 mb-0" style="width: 80px;">
                         <a href="{% url 'broker_create' %}?next=sale" title="Open Broker (return to Sale after save)" style="text-decoration:none; color:#0b3d91;">
@@ -106,9 +106,29 @@
                 </div>
             </div>
 
+            <!-- Firm -->
+            <div class="col-md-3">
+                <div class="d-flex align-items-center mb-2">
+                    <label class="form-label me-2 mb-0" style="width: 80px;">
+                        <a href="{% url 'firm' %}?next=sale" title="Open Firm (return to Sale after save)" style="text-decoration:none; color:#0b3d91;">
+                            Firm <i class="bi bi-plus-circle"></i>
+                        </a>:
+                    </label>
+
+                    <select name="firm" id="firm"
+                            class="form-control form-control-sm flex-grow-1">
+                        <option value="">Select Firm</option>
+                        {% for f in firms %}
+                            <option value="{{ f.pk }}" {% if sale and sale.firm and sale.firm.pk == f.pk %}selected{% endif %}>
+                                {{ f.firmname }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
 
             <!-- Extra -->
-            <div class="col-md-4">
+            <div class="col-md-3">
                 <div class="d-flex align-items-center mb-2">
                     <label class="form-label me-2 mb-0" style="width: 80px;">Extra:</label>
                     <input type="text" name="extra" id="extra"
@@ -117,6 +137,7 @@
                 </div>
             </div>
         </div>
+
 <!-- ================== ITEM ENTRY ROW (Compact Version - FIXED) ================== -->
 <h2 class="mt-4"></h2>
 <div class="row g-1 align-items-end" style="flex-wrap: nowrap;">

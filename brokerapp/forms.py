@@ -1,5 +1,5 @@
 from django import forms
-from .models import HeadParty, Broker, HeadItem, SaleMaster, SaleDetails, PurchaseMaster, PurchaseDetails
+from .models import HeadParty, Broker, HeadItem, SaleMaster, SaleDetails, PurchaseMaster, PurchaseDetails,Firm
 from django.core.exceptions import ValidationError
 from django.contrib.auth.models import User
 from .models import Organization
@@ -103,6 +103,15 @@ class BrokerForm(BlankZeroModelForm):
             raise ValidationError("⚠️ This broker already exists.")
         return brokername
 
+class FirmForm(forms.ModelForm):
+    class Meta:
+        model = Firm
+        fields = ['firmname']
+        widgets = {
+            'firmname': forms.TextInput(attrs={'class': 'form-control'})
+        }
+
+
 class ItemForm(BlankZeroModelForm):
     class Meta:
         model = HeadItem
@@ -142,12 +151,18 @@ class SaleMasterForm(BlankZeroModelForm):
         empty_label="Select Broker",
         widget=forms.Select(attrs={'class': 'form-control'})
     )
-
+    firm = forms.ModelChoiceField(
+        queryset=Firm.objects.all().order_by('firmname'),
+        empty_label="Select Firm",
+        widget=forms.Select(attrs={'class': 'form-control'})
+    )
+    
+    
     class Meta:
         model = SaleMaster
         fields = [
             'invno', 'invdate', 'awakno',
-            'party', 'broker', 'extra', 'vehicleno',
+            'party', 'broker', 'firm','extra', 'vehicleno',
             'totalamt', 'batavpercent', 'batavamt',
             'dr', 'dramt', 'qi', 'other', 'total',
             'advance', 'netamt', 'remark'

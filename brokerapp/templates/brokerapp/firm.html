@@ -1,0 +1,79 @@
+{% extends 'brokerapp/base.html' %}
+{% load static %}
+
+{% block title %}Manage Firms{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+  <div class="row">
+    <!-- Left: Form -->
+    <div class="col-md-6">
+      <h3 class="mb-3 text-primary">🏷️ Manage Firms</h3>
+
+      <form method="POST">
+        {% csrf_token %}
+        <div class="d-flex align-items-center gap-2 mb-3">
+          <label for="id_firmname" class="form-label mb-0">Firm:</label>
+          {{ form.firmname }}
+        </div>
+
+        <div class="mt-2">
+          <button type="submit" class="btn btn-success" name="action" value="save">
+            <i class="fas fa-save me-1"></i> Save
+          </button>
+
+          <button type="submit" class="btn btn-danger" name="action" value="delete"
+                  onclick="return confirm('Are you sure you want to delete this firm?');">
+            <i class="fas fa-trash me-1"></i> Delete
+          </button>
+
+          <a href="{% url 'dashboard' %}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left me-1"></i> Exit
+          </a>
+        </div>
+      </form>
+    </div>
+
+    <!-- Right: Table -->
+    <div class="col-md-6">
+      <h5 class="text-success mb-2">📋 Firm List</h5>
+      <table class="table table-bordered table-striped">
+        <thead class="table-light">
+          <tr>
+            <th>Firm</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for f in firms %}
+            <tr onclick="selectFirm('{{ f.firmname|escapejs }}')" style="cursor: pointer;">
+              <td>{{ f.firmname }}</td>
+            </tr>
+          {% empty %}
+            <tr><td class="text-center text-muted">No firms added yet.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+  function selectFirm(firmname) {
+    const input = document.querySelector('#id_firmname');
+    if (input) {
+      input.value = firmname;
+      // scroll to form (optional)
+      input.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      input.focus();
+    }
+  }
+
+  // Auto-hide messages after 3 seconds
+  setTimeout(() => {
+    document.querySelectorAll('.alert').forEach(el => {
+      el.style.opacity = '0';
+      setTimeout(() => el.remove(), 500);
+    });
+  }, 3000);
+</script>
+{% endblock %}

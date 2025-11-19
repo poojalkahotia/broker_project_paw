@@ -18,6 +18,8 @@ urlpatterns = [
     path('broker/edit/<str:pk>/', views.broker_view, name='broker_edit'),
     path('broker/delete/<str:pk>/', views.broker_delete, name='broker_delete'),
     
+    path('firm/', views.firm_view, name='firm'),
+    
     path('items/', views.item_view, name='item'),  
     path('items/create/', views.item_view, name='item_create'),
     
@@ -58,6 +60,8 @@ urlpatterns = [
     path('daily-page/show/', views.daily_page_show, name='daily_page_show'),         # GET entries for a date (AJAX)
     path('daily-page/jama/add/', views.daily_page_jama_add, name='daily_page_jama_add'),   # POST
     path('daily-page/naame/add/', views.daily_page_naame_add, name='daily_page_naame_add'),# POST
+    path('daily-page/jama/update/', views.daily_page_jama_update, name='daily_page_jama_update'),
+    path('daily-page/naame/update/', views.daily_page_naame_update, name='daily_page_naame_update'),
     path('daily-page/jama/delete/<int:entry_no>/', views.daily_page_jama_delete, name='daily_page_jama_delete'),
     path('daily-page/naame/delete/<int:entry_no>/', views.daily_page_naame_delete, name='daily_page_naame_delete'),
     path('daily-page/pdf/', views.daily_page_pdf, name='daily_page_pdf'),

@@ -11,6 +11,7 @@
                     <th>Invoice No</th>
                     <th>Invoice Date</th>
                     <th>Party Name</th>
+                    <th>Firm</th> 
                     <th>Amount</th>
                     <th>Actions</th>
                 </tr>
@@ -21,6 +22,14 @@
                     <td>{{ purchase.invno }}</td>
                     <td>{{ purchase.invdate }}</td>
                     <td>{{ purchase.party.partyname }}</td>
+                    <!-- ✅ Firm column -->
+                    <td>
+                        {% if purchase.firm %}
+                            {{ purchase.firm.firmname }}
+                        {% else %}
+                            —
+                        {% endif %}
+                    </td>
                     <td>{{ purchase.netamt }}</td>
                     <td>
                         <a href="{% url 'purchase_form_update' purchase.invno %}" class="btn btn-warning">UPDATE</a>

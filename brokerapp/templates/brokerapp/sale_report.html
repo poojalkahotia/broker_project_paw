@@ -13,6 +13,7 @@
 
     <!-- 🔍 FILTER BAR -->
     <form method="get" class="row g-2 align-items-end sticky-top bg-white py-2 border-bottom mb-3" style="z-index:10;">
+
       <div class="col-md-2 col-sm-6">
         <label class="form-label">Start Date</label>
         <input type="date" name="start_date" class="form-control form-control-sm" value="{{ start_date }}">
@@ -23,7 +24,8 @@
         <input type="date" name="end_date" class="form-control form-control-sm" value="{{ end_date }}">
       </div>
 
-      <div class="col-md-3 col-sm-6">
+      <!-- Broker -->
+      <div class="col-md-2 col-sm-6">
         <label class="form-label">Broker</label>
         <select name="broker" class="form-select form-select-sm">
           <option value="all">All</option>
@@ -35,19 +37,35 @@
         </select>
       </div>
 
+      <!-- Firm (new) -->
+      <div class="col-md-2 col-sm-6">
+        <label class="form-label">Firm</label>
+        <select name="firm" class="form-select form-select-sm">
+          <option value="all">All</option>
+          {% for f in firms %}
+            <option value="{{ f.pk }}" {% if selected_firm == f.pk|stringformat:"s" %}selected{% endif %}>
+              {{ f.firmname }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <!-- Report Type -->
       <div class="col-md-3 col-sm-6">
         <label class="form-label">Report Type</label>
         <select name="report_type" class="form-select form-select-sm" onchange="this.form.submit()">
           <option value="date" {% if report_type == "date" %}selected{% endif %}>Date Wise</option>
           <option value="broker" {% if report_type == "broker" %}selected{% endif %}>Date + Broker Wise</option>
+          <option value="firm" {% if report_type == "firm" %}selected{% endif %}>Date + Firm Wise</option>
         </select>
       </div>
 
-      <div class="col-md-2 col-sm-6">
+      <div class="col-md-1 col-sm-6">
         <button type="submit" class="btn btn-primary btn-sm w-100 mt-2">
           <i class="fas fa-search"></i> Filter
         </button>
       </div>
+
     </form>
 
     <!-- 📊 REPORT TABLE -->
@@ -64,6 +82,7 @@
                 <th>Invoice No</th>
                 <th>Invoice Date</th>
                 <th>Broker</th>
+                <th>Firm</th> 
                 <th>Total Amt</th>
                 <th>Batav Amt</th>
                 <th>DR Amt</th>
@@ -80,6 +99,14 @@
                 <td>{{ s.invno }}</td>
                 <td>{{ s.invdate|date:"d-m-Y" }}</td>
                 <td>{{ s.broker.brokername }}</td>
+                <td>
+                  {% if s.firm %}
+                      {{ s.firm.firmname }}
+                  {% else %}
+                      —
+                  {% endif %}
+                </td>
+
                 <td>{{ s.totalamt|floatformat:2 }}</td>
                 <td>{{ s.batavamt|floatformat:2 }}</td>
                 <td>{{ s.dramt|floatformat:2 }}</td>

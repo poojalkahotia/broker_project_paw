@@ -289,3 +289,74 @@ input[type="number"]::-webkit-outer-spin-button {
   border-bottom: none;
 }
 
+
+/* ----- Daily page layout tweaks: widen left (Jama) card, fix action column & add button ----- */
+@media (min-width: 992px) {
+  /* Make both cards equal width (50/50) so action columns get consistent space */
+  .row.g-2 > .col-lg-6 {
+    flex: 0 0 50% !important;
+    max-width: 50% !important;
+  }
+}
+
+/* Give action column more room so icons/buttons don't get clipped */
+@media (min-width: 768px) {
+  #jama_table th:last-child,
+  #naame_table th:last-child {
+    width: 110px !important;
+    min-width: 110px !important;
+  }
+  /* ensure same for body cells (last column = action) */
+  #jama_table td:nth-child(7),
+  #naame_table td:nth-child(7) {
+    width: 110px !important;
+    min-width: 110px !important;
+  }
+}
+
+/* action buttons sizing & alignment (keeps icons centered, prevents cut-off) */
+.table-professional td .btn {
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  padding: .32rem .45rem !important;
+  min-width: 36px !important;
+  line-height: 1 !important;
+}
+.table-professional td .btn svg,
+.table-professional td .btn i {
+  display: inline-block;
+  vertical-align: middle;
+}
+
+/* prevent Add button from hanging out of the card: give body a little extra right padding */
+.card .card-body {
+  padding-right: 1rem; /* modest padding so Add button sits inside visually */
+}
+
+/* keep small-form Add button aligned inside column */
+.col-md-1.d-grid > #jama_add_btn,
+.col-md-1.d-grid > #naame_add_btn {
+  margin-left: 0;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* small screens: keep previous responsive behaviour */
+@media (max-width: 991.98px) {
+  .row.g-2 > .col-lg-6 {
+    flex: 0 0 100% !important;
+    max-width: 100% !important;
+  }
+}
+
+.btn-icon {
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  padding: .35rem .45rem !important;
+  width: 100%;
+  min-width: 38px;
+  box-sizing: border-box;
+}
+.btn-icon i { font-size: 1.05rem; line-height:1; }
