@@ -164,7 +164,8 @@ class PurchaseDetails(models.Model):
     bnwt = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     bo = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     bowt = models.DecimalField(max_digits=12, decimal_places=2, default=0)
-
+    # ✅ NEW: TBWt (same as SaleDetails)
+    tbwt = models.DecimalField("TBWt", max_digits=12, decimal_places=2, default=0)
     qty = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     rate = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     amount = models.DecimalField(max_digits=12, decimal_places=2, default=0)
@@ -172,7 +173,8 @@ class PurchaseDetails(models.Model):
     partywt = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     millwt = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     diffwt = models.DecimalField(max_digits=12, decimal_places=2, default=0)
-
+    # ✅ NEW: FrkWt (same as SaleDetails)
+    frkwt = models.DecimalField("FrkWt", max_digits=12, decimal_places=2, default=0)
     # NEW Lot number after diffwt
     lotno = models.CharField(max_length=50, blank=True, null=True)
 

@@ -60,84 +60,99 @@
         </div>
 
         <!-- Party + Broker + Firm + Extra Section -->
-        <div class="row mt-3 align-items-center">
-            <!-- Party -->
-            <div class="col-md-3">
-                <div class="d-flex align-items-center mb-2">
-                    <label class="form-label me-2 mb-0" style="width: 80px;">
-                        <a href="{% url 'party_create' %}?next=sale" title="Open Party (return to Sale after save)" style="text-decoration:none; color:#0b3d91;">
-                            Party <i class="bi bi-plus-circle"></i>
-                        </a>:
-                    </label>
+        <!-- Party + Broker + Firm + Extra Section -->
+    <div class="row mt-3 align-items-center">
+        <!-- Party -->
+        <div class="col-md-3">
+            <div class="d-flex align-items-center mb-2">
+                <label class="form-label me-2 mb-0" style="width: 80px;">
+                    <a href="{% url 'party_create' %}?next=sale" title="Open Party (return to Sale after save)" style="text-decoration:none; color:#0b3d91;">
+                        Party <i class="bi bi-plus-circle"></i>
+                    </a>:
+                </label>
 
-                    <select name="party" id="party"
-                            class="form-control form-control-sm flex-grow-1"
-                            onchange="fillPartyDetails()" required>
-                        <option value="">Select Party</option>
-                        {% for p in parties %}
-                            <option value="{{ p.pk }}"
-                                    data-add1="{{ p.add1|default_if_none:'' }}"
-                                    {% if sale and sale.party.pk == p.pk %}selected{% endif %}>
-                                {{ p.partyname }}
-                            </option>
-                        {% endfor %}
-                    </select>
-                </div>
-            </div>
-
-            <!-- Broker (same flow as Party: returns to Sale after save) -->
-            <div class="col-md-3">
-                <div class="d-flex align-items-center mb-2">
-                    <label class="form-label me-2 mb-0" style="width: 80px;">
-                        <a href="{% url 'broker_create' %}?next=sale" title="Open Broker (return to Sale after save)" style="text-decoration:none; color:#0b3d91;">
-                            Broker <i class="bi bi-plus-circle"></i>
-                        </a>:
-                    </label>
-
-                    <select name="broker" id="broker"
-                            class="form-control form-control-sm flex-grow-1" required>
-                        <option value="">Select Broker</option>
-                        {% for b in brokers %}
-                            <option value="{{ b.pk }}" {% if sale and sale.broker.pk == b.pk %}selected{% endif %}>
-                                {{ b.brokername }}
-                            </option>
-                        {% endfor %}
-                    </select>
-                </div>
-            </div>
-
-            <!-- Firm -->
-            <div class="col-md-3">
-                <div class="d-flex align-items-center mb-2">
-                    <label class="form-label me-2 mb-0" style="width: 80px;">
-                        <a href="{% url 'firm' %}?next=sale" title="Open Firm (return to Sale after save)" style="text-decoration:none; color:#0b3d91;">
-                            Firm <i class="bi bi-plus-circle"></i>
-                        </a>:
-                    </label>
-
-                    <select name="firm" id="firm"
-                            class="form-control form-control-sm flex-grow-1">
-                        <option value="">Select Firm</option>
-                        {% for f in firms %}
-                            <option value="{{ f.pk }}" {% if sale and sale.firm and sale.firm.pk == f.pk %}selected{% endif %}>
-                                {{ f.firmname }}
-                            </option>
-                        {% endfor %}
-                    </select>
-                </div>
-            </div>
-
-            <!-- Extra -->
-            <div class="col-md-3">
-                <div class="d-flex align-items-center mb-2">
-                    <label class="form-label me-2 mb-0" style="width: 80px;">Extra:</label>
-                    <input type="text" name="extra" id="extra"
+                <select name="party" id="party"
                         class="form-control form-control-sm flex-grow-1"
-                        value="{{ sale.extra|default:'' }}">
-                </div>
+                        onchange="fillPartyDetails()" required>
+                    <option value="">Select Party</option>
+                    {% for p in parties %}
+                        <option value="{{ p.pk }}"
+                                data-add1="{{ p.add1|default_if_none:'' }}"
+                                data-email="{{ p.email|default_if_none:'' }}"
+                                {% if sale and sale.party.pk == p.pk %}selected{% endif %}>
+                            {{ p.partyname }}
+                        </option>
+                    {% endfor %}
+                </select>
             </div>
         </div>
 
+        <!-- Broker -->
+        <div class="col-md-3">
+            <div class="d-flex align-items-center mb-2">
+                <label class="form-label me-2 mb-0" style="width: 80px;">
+                    <a href="{% url 'broker_create' %}?next=sale" title="Open Broker (return to Sale after save)" style="text-decoration:none; color:#0b3d91;">
+                        Broker <i class="bi bi-plus-circle"></i>
+                    </a>:
+                </label>
+
+                <select name="broker" id="broker"
+                        class="form-control form-control-sm flex-grow-1" required>
+                    <option value="">Select Broker</option>
+                    {% for b in brokers %}
+                        <option value="{{ b.pk }}" {% if sale and sale.broker.pk == b.pk %}selected{% endif %}>
+                            {{ b.brokername }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+
+        <!-- Firm -->
+        <div class="col-md-3">
+            <div class="d-flex align-items-center mb-2">
+                <label class="form-label me-2 mb-0" style="width: 80px;">
+                    <a href="{% url 'firm' %}?next=sale" title="Open Firm (return to Sale after save)" style="text-decoration:none; color:#0b3d91;">
+                        Firm <i class="bi bi-plus-circle"></i>
+                    </a>:
+                </label>
+
+                <select name="firm" id="firm"
+                        class="form-control form-control-sm flex-grow-1">
+                    <option value="">Select Firm</option>
+                    {% for f in firms %}
+                        <option value="{{ f.pk }}" {% if sale and sale.firm and sale.firm.pk == f.pk %}selected{% endif %}>
+                            {{ f.firmname }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+
+        <!-- Extra -->
+        <div class="col-md-3">
+            <div class="d-flex align-items-center mb-2">
+                <label class="form-label me-2 mb-0" style="width: 80px;">Extra:</label>
+                <input type="text" name="extra" id="extra"
+                    class="form-control form-control-sm flex-grow-1"
+                    value="{{ sale.extra|default:'' }}">
+            </div>
+        </div>
+    </div>
+
+    <!-- Email Bill Checkbox row -->
+    <div class="row mt-2">
+        <div class="col-md-3 d-flex align-items-center">
+            <input type="checkbox" 
+                name="send_email" 
+                id="send_email" 
+                class="form-check-input me-2"
+                disabled>
+            <label for="send_email" class="form-check-label">
+                Email
+            </label>
+        </div>
+    </div>
 <!-- ================== ITEM ENTRY ROW (Compact Version - FIXED) ================== -->
 <h2 class="mt-4"></h2>
 <div class="row g-1 align-items-end" style="flex-wrap: nowrap;">
@@ -760,7 +775,26 @@ function editItem(idx){
 
     
 });
+// Enable/disable checkbox based on selected party email
+    const partySelect = document.getElementById("party");
+    const sendEmailChk = document.getElementById("send_email");
 
+    function updateEmailCheckbox() {
+        const opt = partySelect.options[partySelect.selectedIndex];
+        const email = opt ? opt.getAttribute("data-email") : "";
+
+        if (email && email.trim() !== "") {
+            sendEmailChk.disabled = false;
+            sendEmailChk.checked = true;
+        } else {
+            sendEmailChk.disabled = true;
+            sendEmailChk.checked = false;
+        }
+    }
+
+    // On load (edit mode) + on change
+    updateEmailCheckbox();
+    partySelect.addEventListener("change", updateEmailCheckbox);
 </script>
 
 

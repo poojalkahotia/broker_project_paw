@@ -142,6 +142,13 @@
           <input type="hidden" name="party" class="footer-party" value="{% if selected %}{{ selected.pk }}{% endif %}">
           <button type="submit" name="action" value="pdf" class="btn btn-outline-danger">PDF</button>
         </form>
+
+        <!-- Email Statement -->
+        <form method="post" class="m-0">
+          {% csrf_token %}
+          <input type="hidden" name="party" class="footer-party" value="{% if selected %}{{ selected.pk }}{% endif %}">
+          <button type="submit" name="action" value="email" class="btn btn-outline-primary">Email</button>
+        </form>
       </div>
     </div>
 

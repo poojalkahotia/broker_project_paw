@@ -95,18 +95,20 @@
             <table class="table table-bordered table-striped mb-0">
                 <thead class="table-dark">
                     <tr>
-                        <th>Party Name</th>
+                        <th class="text-nowrap">Party Name</th>
                         <th>City</th>
                         <th>Mobile</th>
+                        <th>Email</th>
                         <th style="width:1%;">Action</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for party in parties %}
                         <tr>
-                            <td class="text-start">{{ party.partyname }}</td>
+                            <td class="text-nowrap">{{ party.partyname }}</td>
                             <td class="text-start">{{ party.city }}</td>
                             <td class="text-start">{{ party.mobile }}</td>
+                            <td class="text-start">{{ party.email }}</td>
                             <td class="text-center align-middle">
                                 <div class="d-inline-flex flex-row flex-nowrap align-items-center gap-2">
                                     <a href="{% url 'party_edit' party.partyname %}"

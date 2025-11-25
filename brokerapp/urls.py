@@ -8,6 +8,7 @@ urlpatterns = [
     
     # Party URLs
     path('parties/', views.party_view, name='party'),
+
     path('parties/', views.party_view, name='party_create'),  # create/new
     path('parties/list/', views.party_view, name='party'),    # optional list (same view)
     path('parties/edit/<str:pk>/', views.party_view, name='party_edit'),
@@ -55,6 +56,9 @@ urlpatterns = [
     path('purchase/delete/<int:invno>/', views.delete_purchase, name='delete_purchase'),
     path('purchasedata/', views.purchase_data_view, name='purchasedata'),
     path("purchase-report/", views.purchase_report, name="purchase_report"),
+    path('reports/purchase/pdf/', views.purchase_report_pdf, name='purchase_report_pdf'),
+
+
     
     path('daily-page/', views.daily_page_view, name='daily_page'),
     path('daily-page/show/', views.daily_page_show, name='daily_page_show'),         # GET entries for a date (AJAX)

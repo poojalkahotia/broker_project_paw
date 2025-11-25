@@ -10,19 +10,26 @@
 
   <div class="card-body">
 
-    <!-- 🔍 FILTER BAR -->
-    <form method="get" class="row g-2 align-items-end sticky-top bg-white py-2 border-bottom mb-3" style="z-index:10;">
+    <!-- 🔍 FILTER BAR (same layout as Sale Report) -->
+    <form method="get"
+          class="row g-2 align-items-end sticky-top bg-white py-2 border-bottom mb-3"
+          style="z-index:10;">
+
       <div class="col-md-2 col-sm-6">
         <label class="form-label">Start Date</label>
-        <input type="date" name="start_date" class="form-control form-control-sm" value="{{ start_date }}">
+        <input type="date" name="start_date"
+               class="form-control form-control-sm"
+               value="{{ start_date }}">
       </div>
 
       <div class="col-md-2 col-sm-6">
         <label class="form-label">End Date</label>
-        <input type="date" name="end_date" class="form-control form-control-sm" value="{{ end_date }}">
+        <input type="date" name="end_date"
+               class="form-control form-control-sm"
+               value="{{ end_date }}">
       </div>
 
-      <div class="col-md-3 col-sm-6">
+      <div class="col-md-2 col-sm-6">
         <label class="form-label">Broker</label>
         <select name="broker" class="form-select form-select-sm">
           <option value="all">All</option>
@@ -34,10 +41,7 @@
         </select>
       </div>
 
-      <!-- OPTIONAL: Firm Filter -->
-      {# Uncomment if you want firm filter #}
-      {#
-      <div class="col-md-3 col-sm-6">
+      <div class="col-md-2 col-sm-6">
         <label class="form-label">Firm</label>
         <select name="firm" class="form-select form-select-sm">
           <option value="all">All</option>
@@ -48,9 +52,8 @@
           {% endfor %}
         </select>
       </div>
-      #}
 
-      <div class="col-md-3 col-sm-6">
+      <div class="col-md-2 col-sm-6">
         <label class="form-label">Report Type</label>
         <select name="report_type" class="form-select form-select-sm" onchange="this.form.submit()">
           <option value="date" {% if report_type == "date" %}selected{% endif %}>Date Wise</option>
@@ -58,11 +61,12 @@
         </select>
       </div>
 
-      <div class="col-md-2 col-sm-6">
-        <button type="submit" class="btn btn-primary btn-sm w-100 mt-2">
+      <div class="col-md-2 col-sm-6 d-grid">
+        <button type="submit" class="btn btn-primary btn-sm mt-2 mt-md-0">
           <i class="fas fa-search"></i> Filter
         </button>
       </div>
+
     </form>
 
     <!-- 📊 REPORT TABLE -->
@@ -79,7 +83,7 @@
                 <th>Invoice No</th>
                 <th>Invoice Date</th>
                 <th>Broker</th>
-                <th>Firm</th>       <!-- ✅ Added Firm column -->
+                <th>Firm</th>
                 <th>Total Amt</th>
                 <th>Batav Amt</th>
                 <th>DR Amt</th>
@@ -96,8 +100,6 @@
                 <td>{{ p.invno }}</td>
                 <td>{{ p.invdate|date:"d-m-Y" }}</td>
                 <td>{{ p.broker.brokername }}</td>
-
-                <!-- ✅ FIRM VALUE -->
                 <td>
                   {% if p.firm %}
                     {{ p.firm.firmname }}
@@ -105,7 +107,6 @@
                     —
                   {% endif %}
                 </td>
-
                 <td>{{ p.totalamt|floatformat:2 }}</td>
                 <td>{{ p.batavamt|floatformat:2 }}</td>
                 <td>{{ p.dramt|floatformat:2 }}</td>
@@ -134,41 +135,75 @@
         </div>
       {% endfor %}
     {% else %}
-      <p class="text-center text-muted mt-4">No purchases found for selected filters.</p>
+      <p class="text-center text-muted mt-4">
+        No purchases found for selected filters.
+      </p>
     {% endif %}
 
-    <!-- 🌐 OVERALL TOTALS -->
+    <!-- 🌐 OVERALL TOTALS (same vertical style as Sale) -->
     <div class="card mt-4 border-0 shadow-sm">
-      <div class="card-body bg-light">
-        <h6 class="fw-bold text-primary mb-2"><i class="fas fa-sigma"></i> Overall Totals</h6>
-        <div class="row text-center">
-          <div class="col-md-2">Total Amt: <strong>{{ overall_totals.total_totalamt|floatformat:2 }}</strong></div>
-          <div class="col-md-2">Batav Amt: <strong>{{ overall_totals.total_batavamt|floatformat:2 }}</strong></div>
-          <div class="col-md-2">DR Amt: <strong>{{ overall_totals.total_dramt|floatformat:2 }}</strong></div>
-          <div class="col-md-2">Other: <strong>{{ overall_totals.total_other|floatformat:2 }}</strong></div>
-          <div class="col-md-2">Advance: <strong>{{ overall_totals.total_advance|floatformat:2 }}</strong></div>
-          <div class="col-md-2">Net Amt: <strong>{{ overall_totals.total_netamt|floatformat:2 }}</strong></div>
+      <div class="card-body bg-light overall-totals-vertical">
+        <h6 class="fw-bold text-primary mb-3">
+          <i class="fas fa-sigma"></i> Overall Totals
+        </h6>
+        <div class="totals-box">
+          <div class="total-line">
+            <span>Total Amt:</span>
+            <strong>{{ overall_totals.total_totalamt|floatformat:2 }}</strong>
+          </div>
+          <div class="total-line">
+            <span>Batav Amt:</span>
+            <strong>{{ overall_totals.total_batavamt|floatformat:2 }}</strong>
+          </div>
+          <div class="total-line">
+            <span>DR Amt:</span>
+            <strong>{{ overall_totals.total_dramt|floatformat:2 }}</strong>
+          </div>
+          <div class="total-line">
+            <span>Other:</span>
+            <strong>{{ overall_totals.total_other|floatformat:2 }}</strong>
+          </div>
+          <div class="total-line">
+            <span>Advance:</span>
+            <strong>{{ overall_totals.total_advance|floatformat:2 }}</strong>
+          </div>
+          <div class="total-line border-top pt-2 mt-2">
+            <span>Net Amt:</span>
+            <strong>{{ overall_totals.total_netamt|floatformat:2 }}</strong>
+          </div>
         </div>
       </div>
     </div>
 
-  </div>
+    <!-- 📤 EXPORT OPTIONS -->
+    <div class="card-footer d-flex justify-content-between align-items-center d-print-none">
+      <div>
+        <button class="btn btn-outline-secondary btn-sm" onclick="window.print()">
+          <i class="fas fa-print"></i> Print
+        </button>
 
-  <!-- 📤 EXPORT OPTIONS -->
-  <div class="card-footer d-flex justify-content-between align-items-center">
-    <div>
-      <button class="btn btn-outline-secondary btn-sm" onclick="window.print()">
-        <i class="fas fa-print"></i> Print
-      </button>
-      <button class="btn btn-outline-success btn-sm" id="exportExcel">
-        <i class="fas fa-file-excel"></i> Export Excel
-      </button>
+        <button class="btn btn-outline-success btn-sm" id="exportExcel">
+          <i class="fas fa-file-excel"></i> Export Excel
+        </button>
+
+        <!-- PDF (same style as Sale Report) -->
+        <a id="exportPdf"
+           href="{% url 'purchase_report_pdf' %}?{{ request.GET.urlencode }}"
+           class="btn btn-outline-danger btn-sm"
+           target="_blank" rel="noopener">
+          <i class="fas fa-file-pdf"></i> PDF
+        </a>
+      </div>
+
+      <small class="text-muted">
+        Report generated on {{ now|date:"d M Y, h:i A" }}
+      </small>
     </div>
-    <small class="text-muted">Report generated on {{ now|date:"d M Y, h:i A" }}</small>
+
   </div>
 </div>
 
-<!-- ✅ JS: Export Excel -->
+<!-- ✅ JS: Export Excel + shortcuts (E = Excel, P = PDF) -->
 <script>
 document.getElementById("exportExcel").addEventListener("click", function () {
   let table = document.querySelector("table");
@@ -178,6 +213,38 @@ document.getElementById("exportExcel").addEventListener("click", function () {
   a.href = 'data:application/vnd.ms-excel,' + html;
   a.download = 'purchase_report.xls';
   a.click();
+});
+
+// Keyboard shortcuts: Ctrl+Shift+E (Excel), Ctrl+Shift+P (PDF)
+document.addEventListener('keyup', function(e){
+  try {
+    const active = document.activeElement;
+    const tag = active && active.tagName;
+    if (tag === 'INPUT' || tag === 'TEXTAREA' || (active && active.isContentEditable)) return;
+    if (!(e.ctrlKey && e.shiftKey)) return;
+
+    const key = (e.key || '').toUpperCase();
+
+    if (key === 'E') {
+      const btn = document.getElementById('exportExcel');
+      if (btn) {
+        e.preventDefault();
+        btn.click();
+      }
+      return;
+    }
+
+    if (key === 'P') {
+      const link = document.getElementById('exportPdf');
+      if (link) {
+        e.preventDefault();
+        link.click();
+      }
+      return;
+    }
+  } catch (err) {
+    console.warn('shortcut handler error', err);
+  }
 });
 </script>
 {% endblock %}

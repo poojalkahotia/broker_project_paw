@@ -27,6 +27,11 @@ from django.urls import reverse
 from urllib.parse import quote
 import io
 from decimal import Decimal, InvalidOperation
+from django.core.mail import send_mail
+from django.core.mail import EmailMessage
+
+from django.conf import settings
+
 try:
     from openpyxl import Workbook
     from openpyxl.utils import get_column_letter
@@ -156,13 +161,14 @@ def sale_form(request, invno=None):
 
 # ===================== SAVE SALE =====================
 
+
 @transaction.atomic
 def save_sale(request):
     """
     Save a new SaleMaster and its SaleDetails — scoped to current org.
     """
     if request.method != "POST":
-        return redirect('sale_form_new')
+        return redirect("sale_form_new")
 
     try:
         invdate_str = request.POST.get("invdate")
@@ -180,36 +186,36 @@ def save_sale(request):
             messages.error(request, "Add at least one item before saving.")
             return redirect("sale_form_new")
 
-        total_amt = Decimal('0')
+        total_amt = Decimal("0")
         for it in items:
             total_amt += to_decimal(it.get("amt", 0))
 
         batavpercent = to_decimal(request.POST.get("batavpercent", 0))
-        batavamt = (total_amt * batavpercent / Decimal('100')).quantize(Decimal('0.01'))
+        batavamt = (total_amt * batavpercent / Decimal("100")).quantize(Decimal("0.01"))
 
         dr = to_decimal(request.POST.get("dr", 0))
-        dramt = (total_amt * dr / Decimal('100')).quantize(Decimal('0.01'))
+        dramt = (total_amt * dr / Decimal("100")).quantize(Decimal("0.01"))
 
         qi = to_decimal(request.POST.get("qi", 0))
         other = to_decimal(request.POST.get("other", 0))
         advance = to_decimal(request.POST.get("advance", 0))
-        total = (total_amt - batavamt - dramt - qi - other).quantize(Decimal('0.01'))
-        netamt = (total - advance).quantize(Decimal('0.01'))
+        total = (total_amt - batavamt - dramt - qi - other).quantize(Decimal("0.01"))
+        netamt = (total - advance).quantize(Decimal("0.01"))
 
         # Resolve FKs inside same org
         party = get_object_or_404(HeadParty, pk=party_pk, org=request.current_org)
         broker = get_object_or_404(Broker, pk=broker_pk, org=request.current_org)
-        # Firm must belong to same org (if Firm has org FK). If your Firm model isn't org-scoped,
-        # remove the org=... kwarg below.
-        # Resolve Firm. If Firm model has an 'org' FK, scope by current_org; otherwise resolve by pk only.
+
+        # Firm resolve
         firm = None
         if firm_pk:
             firm_fields = [f.name for f in Firm._meta.get_fields()]
-            if 'org' in firm_fields:
+            if "org" in firm_fields:
                 firm = get_object_or_404(Firm, pk=firm_pk, org=request.current_org)
             else:
                 firm = get_object_or_404(Firm, pk=firm_pk)
-        # Create SaleMaster with org + created_by
+
+        # Create SaleMaster
         sale = SaleMaster.objects.create(
             org=request.current_org,
             created_by=request.user,
@@ -220,7 +226,7 @@ def save_sale(request):
             firm=firm,
             vehicleno=vehicleno,
             extra=extra,
-            totalamt=total_amt.quantize(Decimal('0.01')),
+            totalamt=total_amt.quantize(Decimal("0.01")),
             batavpercent=batavpercent,
             batavamt=batavamt,
             dr=dr,
@@ -233,7 +239,7 @@ def save_sale(request):
             remark=request.POST.get("remark", "").strip(),
         )
 
-        # Create SaleDetails (items limited to same org)
+        # Save Items
         for it in items:
             item_id = it.get("item_id")
             item_obj = get_object_or_404(HeadItem, pk=item_id, org=request.current_org)
@@ -256,8 +262,157 @@ def save_sale(request):
                 lotno=it.get("lotno", "").strip(),
             )
 
+        
+        # -------------------------
+        #  EMAIL + PROFESSIONAL PDF INVOICE
+        # -------------------------
+        send_email = request.POST.get("send_email") == "on"
+
+        if send_email and party.email:
+            # FPDF installed nahin hua to simple warning
+            if FPDF is None:
+                messages.warning(
+                    request,
+                    "Invoice email ke liye 'fpdf' package chahiye. Install: pip install fpdf"
+                )
+            else:
+                # helper: UTF-8 -> ascii only
+                def safe_text(val, maxlen=None):
+                    s = "" if val is None else str(val)
+                    s = s.replace("—", "-").replace("–", "-")
+                    s = "".join(ch if ord(ch) < 128 else "?" for ch in s)
+                    return s[:maxlen] if maxlen else s
+
+                try:
+                    # ---------- 1) Professional looking invoice PDF ----------
+                    pdf = FPDF("P", "mm", "A4")
+                    pdf.set_auto_page_break(auto=True, margin=15)
+                    pdf.set_margins(15, 15, 15)
+                    pdf.add_page()
+
+                    # Top org name
+                    org_name = getattr(sale.org, "name", str(sale.org))
+                    pdf.set_font("Helvetica", "B", 16)
+                    pdf.cell(0, 8, safe_text(org_name, 60), ln=1)
+
+                    pdf.set_font("Helvetica", "", 10)
+                    pdf.cell(0, 6, safe_text("Sale Invoice", 40), ln=1)
+                    pdf.ln(2)
+
+                    # Invoice meta (left-right panel)
+                    pdf.set_font("Helvetica", "", 10)
+
+                    pdf.cell(28, 6, "Invoice No:", 0, 0)
+                    pdf.cell(60, 6, safe_text(sale.invno), 0, 0)
+                    pdf.cell(20, 6, "Date:", 0, 0)
+                    pdf.cell(0, 6, safe_text(sale.invdate.strftime("%d-%m-%Y")), 0, 1)
+
+                    pdf.cell(28, 6, "Party:", 0, 0)
+                    pdf.cell(60, 6, safe_text(sale.party.partyname, 40), 0, 0)
+                    pdf.cell(20, 6, "Vehicle:", 0, 0)
+                    pdf.cell(0, 6, safe_text(sale.vehicleno or "-", 30), 0, 1)
+
+                    pdf.cell(28, 6, "Firm:", 0, 0)
+                    firm_label = getattr(sale.firm, "firmname", "") if sale.firm else ""
+                    pdf.cell(60, 6, safe_text(firm_label, 40), 0, 0)
+                    pdf.cell(20, 6, "Broker:", 0, 0)
+                    pdf.cell(0, 6, safe_text(sale.broker.brokername, 40), 0, 1)
+
+                    pdf.ln(4)
+
+                    # Items table
+                    headers = ["Item", "Bora", "TBwt", "Qty", "FrkWt", "Rate", "Amount", "LotNo"]
+                    # total width ~ 180mm (A4 width 210 - margins 15+15)
+                    widths  = [45,   15,    18,    15,    18,     22,    25,      22]
+
+                    pdf.set_font("Helvetica", "B", 9)
+                    for i, h in enumerate(headers):
+                        pdf.cell(widths[i], 7, safe_text(h, 20), border=1, align="C")
+                    pdf.ln(7)
+
+                    pdf.set_font("Helvetica", "", 9)
+                    details_qs = SaleDetails.objects.filter(salemaster=sale).select_related("item")
+
+                    for d in details_qs:
+                        row = [
+                            safe_text(d.item.item_name, 30),
+                            safe_text(f"{d.bora:.0f}", 5),
+                            safe_text(f"{d.tbwt:.2f}", 10),
+                            safe_text(f"{d.qty:.2f}", 10),
+                            safe_text(f"{d.frkwt:.2f}", 10),
+                            safe_text(f"{d.rate:.2f}", 10),
+                            safe_text(f"{d.amount:.2f}", 12),
+                            safe_text(d.lotno or "", 12),
+                        ]
+                        for i, v in enumerate(row):
+                            align = "R" if i in (1, 2, 3, 4, 5, 6) else "L"
+                            pdf.cell(widths[i], 7, v, border=1, align=align)
+                        pdf.ln(7)
+
+                    pdf.ln(3)
+
+                    # Totals block on right side
+                    pdf.set_font("Helvetica", "", 9)
+                    right_x = pdf.w - 15 - 60   # 60mm wide totals box
+                    pdf.set_xy(right_x, pdf.get_y())
+
+                    lines = [
+                        ("Total Amount",    sale.totalamt),
+                        (f"Batav ({sale.batavpercent:.2f}%)", sale.batavamt),
+                        (f"Dr ({sale.dr:.2f}%)", sale.dramt),
+                        ("QI + Other",      sale.qi + sale.other),
+                        ("Advance",         sale.advance),
+                        ("Net Amount",      sale.netamt),
+                    ]
+                    for label, val in lines:
+                        pdf.cell(35, 6, safe_text(label, 30), border=0, align="R")
+                        pdf.cell(25, 6, f"{val:.2f}", border=0, align="R")
+                        pdf.ln(6)
+
+                    # footer note
+                    pdf.ln(4)
+                    pdf.set_x(15)
+                    pdf.set_font("Helvetica", "I", 8)
+                    pdf.cell(0, 5, "This is a system generated invoice.", 0, 1)
+
+                    buf = io.BytesIO()
+                    pdf.output(buf)
+                    buf.seek(0)
+                    pdf_bytes = buf.read()
+
+                    safe_party = "".join(
+                        ch if ord(ch) < 128 else "?" for ch in party.partyname
+                    )[:40]
+
+                    # ---------- 2) Email with attached PDF ----------
+                    subject = f"Sale Invoice #{sale.invno}"
+                    body = (
+                        f"Dear {party.partyname},\n\n"
+                        "Please find your sale invoice attached as PDF.\n\n"
+                        f"Total Amount: {sale.totalamt:.2f}\n"
+                        f"Net Amount  : {sale.netamt:.2f}\n\n"
+                        "Thank you."
+                    )
+
+                    email = EmailMessage(
+                        subject,
+                        body,
+                        settings.DEFAULT_FROM_EMAIL,
+                        [party.email],
+                    )
+                    email.attach(
+                        f"invoice_{sale.invno}_{safe_party}.pdf",
+                        pdf_bytes,
+                        "application/pdf",
+                    )
+                    email.send(fail_silently=False)
+
+                except Exception as e:
+                    messages.warning(request, f"Sale saved but invoice email not sent: {e}")
+
         messages.success(request, "Sale entry saved successfully!")
         return redirect("saledata")
+        
 
     except Exception as e:
         messages.error(request, f"Error saving sale: {e}")
@@ -266,15 +421,13 @@ def save_sale(request):
 
 @transaction.atomic
 def update_sale(request, invno):
-    """
-    Update existing SaleMaster identified by invno (scoped to current org).
-    """
     sale = get_object_or_404(SaleMaster, invno=invno, org=request.current_org)
 
     if request.method != "POST":
         return redirect('sale_form_update', invno=invno)
 
     try:
+        # ---------- HEADER FIELDS ----------
         invdate_str = request.POST.get("invdate")
         invdate = datetime.strptime(invdate_str, "%Y-%m-%d").date() if invdate_str else sale.invdate
         awakno = request.POST.get("awakno", "").strip()
@@ -283,50 +436,51 @@ def update_sale(request, invno):
         vehicleno = request.POST.get("vehicleno", "").strip()
         extra = request.POST.get("extra", "").strip()
 
+        # ---------- ITEMS ----------
         items_json = request.POST.get("items_json") or "[]"
         items = json.loads(items_json)
         if not items:
             messages.error(request, "Add at least one item before saving.")
             return redirect("sale_form_update", invno=invno)
 
-        total_amt = Decimal('0')
+        total_amt = Decimal("0")
         for it in items:
             total_amt += to_decimal(it.get("amt", 0))
 
         batavpercent = to_decimal(request.POST.get("batavpercent", 0))
-        batavamt = (total_amt * batavpercent / Decimal('100')).quantize(Decimal('0.01'))
+        batavamt = (total_amt * batavpercent / Decimal('100')).quantize(Decimal("0.01"))
 
         dr = to_decimal(request.POST.get("dr", 0))
-        dramt = (total_amt * dr / Decimal('100')).quantize(Decimal('0.01'))
+        dramt = (total_amt * dr / Decimal('100')).quantize(Decimal("0.01"))
 
         qi = to_decimal(request.POST.get("qi", 0))
         other = to_decimal(request.POST.get("other", 0))
         advance = to_decimal(request.POST.get("advance", 0))
-        total = (total_amt - batavamt - dramt - qi - other).quantize(Decimal('0.01'))
-        netamt = (total - advance).quantize(Decimal('0.01'))
 
-        # Resolve FKs inside same org
+        total = (total_amt - batavamt - dramt - qi - other).quantize(Decimal("0.01"))
+        netamt = (total - advance).quantize(Decimal("0.01"))
+
+        # ---------- FOREIGN KEYS ----------
         party = get_object_or_404(HeadParty, pk=party_pk, org=request.current_org)
         broker = get_object_or_404(Broker, pk=broker_pk, org=request.current_org)
-        firm_pk = request.POST.get("firm")
-        # Resolve Firm safely: only include org= when the Firm model actually has that field.
+
         firm = None
+        firm_pk = request.POST.get("firm")
         if firm_pk:
             firm_fields = [f.name for f in Firm._meta.get_fields()]
-            if 'org' in firm_fields:
+            if "org" in firm_fields:
                 firm = get_object_or_404(Firm, pk=firm_pk, org=request.current_org)
             else:
                 firm = get_object_or_404(Firm, pk=firm_pk)
-        # Update header
+
+        # ---------- UPDATE HEADER ----------
         sale.invdate = invdate
         sale.awakno = awakno
         sale.party = party
         sale.broker = broker
-        if firm is not None:
-            sale.firm = firm
         sale.vehicleno = vehicleno
         sale.extra = extra
-        sale.totalamt = total_amt.quantize(Decimal('0.01'))
+        sale.totalamt = total_amt.quantize(Decimal("0.01"))
         sale.batavpercent = batavpercent
         sale.batavamt = batavamt
         sale.dr = dr
@@ -337,13 +491,14 @@ def update_sale(request, invno):
         sale.total = total
         sale.netamt = netamt
         sale.remark = request.POST.get("remark", "").strip()
+        if firm:
+            sale.firm = firm
         sale.save()
 
-        # Replace details
+        # ---------- REPLACE ITEM ROWS ----------
         SaleDetails.objects.filter(salemaster=sale).delete()
         for it in items:
-            item_id = it.get("item_id")
-            item_obj = get_object_or_404(HeadItem, pk=item_id, org=request.current_org)
+            item_obj = get_object_or_404(HeadItem, pk=it.get("item_id"), org=request.current_org)
             SaleDetails.objects.create(
                 salemaster=sale,
                 item=item_obj,
@@ -363,13 +518,142 @@ def update_sale(request, invno):
                 lotno=it.get("lotno", "").strip(),
             )
 
+        # --------------------------------------------------------------------
+        # EMAIL + PDF (PROFESSIONAL INVOICE) — CORRECT POSITION, CLEAN INDENT
+        # --------------------------------------------------------------------
+        send_email = request.POST.get("send_email") == "on"
+
+        if send_email and party.email:
+            if FPDF is None:
+                messages.warning(request, "PDF library missing: pip install fpdf")
+            else:
+
+                def safe_text(v, maxlen=None):
+                    s = "" if v is None else str(v)
+                    s = "".join(ch if ord(ch) < 128 else "?" for ch in s)
+                    return s[:maxlen] if maxlen else s
+
+                try:
+                    # Make PDF (same code as save_sale)
+                    pdf = FPDF("P", "mm", "A4")
+                    pdf.set_auto_page_break(auto=True, margin=15)
+                    pdf.set_margins(15, 15, 15)
+                    pdf.add_page()
+
+                    # Header
+                    org_name = getattr(sale.org, "name", "")
+                    pdf.set_font("Helvetica", "B", 16)
+                    pdf.cell(0, 8, safe_text(org_name), ln=1)
+
+                    pdf.set_font("Helvetica", "", 10)
+                    pdf.cell(0, 6, "Sale Invoice (Updated)", ln=1)
+                    pdf.ln(2)
+
+                    # Details
+                    pdf.set_font("Helvetica", "", 10)
+                    pdf.cell(28, 6, "Invoice No:", 0, 0)
+                    pdf.cell(60, 6, safe_text(sale.invno), 0, 0)
+                    pdf.cell(20, 6, "Date:", 0, 0)
+                    pdf.cell(0, 6, sale.invdate.strftime("%d-%m-%Y"), 0, 1)
+
+                    pdf.cell(28, 6, "Party:", 0, 0)
+                    pdf.cell(60, 6, safe_text(party.partyname), 0, 0)
+                    pdf.cell(20, 6, "Vehicle:", 0, 0)
+                    pdf.cell(0, 6, safe_text(sale.vehicleno or "-"), 0, 1)
+
+                    pdf.ln(4)
+
+                    # Table
+                    headers = ["Item", "Bora", "TBwt", "Qty", "FrkWt", "Rate", "Amount", "LotNo"]
+                    widths  = [45, 15, 18, 15, 18, 22, 25, 22]
+
+                    pdf.set_font("Helvetica", "B", 9)
+                    for i, h in enumerate(headers):
+                        pdf.cell(widths[i], 7, safe_text(h), border=1, align="C")
+                    pdf.ln(7)
+
+                    pdf.set_font("Helvetica", "", 9)
+                    rows = SaleDetails.objects.filter(salemaster=sale)
+
+                    for d in rows:
+                        row = [
+                            safe_text(d.item.item_name),
+                            f"{d.bora:.0f}",
+                            f"{d.tbwt:.2f}",
+                            f"{d.qty:.2f}",
+                            f"{d.frkwt:.2f}",
+                            f"{d.rate:.2f}",
+                            f"{d.amount:.2f}",
+                            safe_text(d.lotno),
+                        ]
+                        for i, v in enumerate(row):
+                            pdf.cell(widths[i], 7, v, border=1, align="R" if i>0 else "L")
+                        pdf.ln(7)
+
+                    # Totals
+                    pdf.ln(3)
+                    right_x = pdf.w - 15 - 60
+                    pdf.set_xy(right_x, pdf.get_y())
+
+                    totals = [
+                        ("Total Amount", total_amt),
+                        (f"Batav ({batavpercent:.2f}%)", batavamt),
+                        (f"Dr ({dr:.2f}%)", dramt),
+                        ("QI + Other", qi + other),
+                        ("Advance", advance),
+                        ("Net Amount", netamt),
+                    ]
+
+                    for lbl, val in totals:
+                        pdf.cell(35, 6, safe_text(lbl), 0, 0, "R")
+                        pdf.cell(25, 6, f"{val:.2f}", 0, 1, "R")
+
+                    # Footer
+                    pdf.ln(4)
+                    pdf.set_x(15)
+                    pdf.set_font("Helvetica", "I", 8)
+                    pdf.cell(0, 5, "This is a system-generated invoice.")
+
+                    # Output
+                    buf = io.BytesIO()
+                    pdf.output(buf)
+                    buf.seek(0)
+                    pdf_bytes = buf.read()
+
+                    safe_party = "".join(ch if ord(ch)<128 else "?" for ch in party.partyname)
+
+                    subject = f"Updated Sale Invoice #{sale.invno}"
+                    body = (
+                        f"Dear {party.partyname},\n\n"
+                        "Your sale invoice has been UPDATED.\n\n"
+                        f"Total Amount: {total_amt:.2f}\n"
+                        f"Net Amount  : {netamt:.2f}\n\n"
+                        "Please find attached updated invoice PDF.\n\n"
+                        "Thank you."
+                    )
+
+                    email = EmailMessage(
+                        subject,
+                        body,
+                        settings.DEFAULT_FROM_EMAIL,
+                        [party.email],
+                    )
+                    email.attach(
+                        f"invoice_{sale.invno}_{safe_party}.pdf",
+                        pdf_bytes,
+                        "application/pdf"
+                    )
+                    email.send()
+
+                except Exception as e:
+                    messages.warning(request, f"Invoice email not sent: {e}")
+
         messages.success(request, "Sale entry updated successfully!")
         return redirect("saledata")
 
     except Exception as e:
         messages.error(request, f"Error updating sale: {e}")
         return redirect("sale_form_update", invno=invno)
-
 
 def sale_data_view(request):
     """List of sales (scoped to current org)."""
@@ -941,13 +1225,15 @@ def purchase_form(request, invno=None):
                 "bnwt": float(d.bnwt),
                 "bo": float(d.bo),
                 "bowt": float(d.bowt),
-                "totalbora": float(d.bn*d.bnwt + d.bo*d.bowt),
+                "tbwt": float(getattr(d, "tbwt", 0)),          # NEW: TBWt like sale
+                "totalbora": float(d.bn * d.bnwt + d.bo * d.bowt),
                 "qty": float(d.qty),
                 "rate": float(d.rate),
                 "amt": float(d.amount),
                 "partywt": float(d.partywt),
                 "millwt": float(d.millwt),
                 "diffwt": float(d.diffwt),
+                "frkwt": float(getattr(d, "frkwt", 0)),        # NEW: FrkWt like sale
                 "lotno": d.lotno or "",
             })
         purchase_items_json = json.dumps(items_data)
@@ -955,12 +1241,13 @@ def purchase_form(request, invno=None):
     # next invoice number — per ORG
     next_invno = PurchaseMaster.objects.filter(org=request.current_org).aggregate(Max("invno"))['invno__max']
     next_invno = (next_invno + 1) if next_invno else 1
+
     # Firms: try to scope to current_org if Firm has org FK, otherwise return all firms
     try:
-        # if Firm has 'org' field this will work; otherwise it raises FieldDoesNotExist or similar
         firms_qs = Firm.objects.filter(org=request.current_org).order_by('firmname')
     except Exception:
         firms_qs = Firm.objects.all().order_by('firmname')
+
     context = {
         "purchase": purchase,
         "purchase_items_json": purchase_items_json,
@@ -980,15 +1267,20 @@ def purchase_form(request, invno=None):
 def save_purchase(request):
     """
     Save a new PurchaseMaster and its PurchaseDetails — scoped to current org.
+    Also sends invoice email with attached PDF (like Sale).
     """
     assert getattr(request, "current_org", None) is not None, "current_org missing"
+
     if request.method != "POST":
-        return redirect('purchase_form_new')
+        return redirect("purchase_form_new")
 
     try:
-        # Header
+        # -------- Header fields --------
         invdate_str = request.POST.get("invdate")
-        invdate = datetime.strptime(invdate_str, "%Y-%m-%d").date() if invdate_str else date.today()
+        invdate = (
+            datetime.strptime(invdate_str, "%Y-%m-%d").date()
+            if invdate_str else date.today()
+        )
         awakno = request.POST.get("awakno", "").strip()
         extra = request.POST.get("extra", "").strip()
         party_pk = request.POST.get("party")
@@ -996,45 +1288,44 @@ def save_purchase(request):
         firm_pk = request.POST.get("firm")
         vehicleno = request.POST.get("vehicleno", "").strip()
 
-        # Items
+        # -------- Items JSON --------
         items_json = request.POST.get("items_json") or "[]"
         items = json.loads(items_json)
         if not items:
             messages.error(request, "Add at least one item before saving.")
             return redirect("purchase_form_new")
 
-        # Totals
-        total_amt = Decimal('0')
+        # -------- Totals (same style as Sale) --------
+        total_amt = Decimal("0")
         for it in items:
             total_amt += to_decimal(it.get("amt", 0))
 
         batavpercent = to_decimal(request.POST.get("batavpercent", 0))
-        batavamt = (total_amt * batavpercent / Decimal('100')).quantize(Decimal('0.01'))
+        batavamt = (total_amt * batavpercent / Decimal("100")).quantize(Decimal("0.01"))
 
         dr = to_decimal(request.POST.get("dr", 0))
-        dramt = (total_amt * dr / Decimal('100')).quantize(Decimal('0.01'))
+        dramt = (total_amt * dr / Decimal("100")).quantize(Decimal("0.01"))
 
         qi = to_decimal(request.POST.get("qi", 0))
         other = to_decimal(request.POST.get("other", 0))
         advance = to_decimal(request.POST.get("advance", 0))
-        total = (total_amt - batavamt - dramt - qi - other).quantize(Decimal('0.01'))
-        netamt = (total - advance).quantize(Decimal('0.01'))
 
-        # Resolve FKs within same org
+        total = (total_amt - batavamt - dramt - qi - other).quantize(Decimal("0.01"))
+        netamt = (total - advance).quantize(Decimal("0.01"))
+
+        # -------- Resolve FKs within same org --------
         party = get_object_or_404(HeadParty, pk=party_pk, org=request.current_org)
         broker = get_object_or_404(Broker, pk=broker_pk, org=request.current_org)
-        # Firm must belong to same org (if Firm has org FK). If your Firm model isn't org-scoped,
-        # remove the org=... kwarg below.
-        # Resolve Firm. If Firm model has an 'org' FK, scope by current_org; otherwise resolve by pk only.
+
         firm = None
         if firm_pk:
             firm_fields = [f.name for f in Firm._meta.get_fields()]
-            if 'org' in firm_fields:
+            if "org" in firm_fields:
                 firm = get_object_or_404(Firm, pk=firm_pk, org=request.current_org)
             else:
                 firm = get_object_or_404(Firm, pk=firm_pk)
 
-        # Create master (bind org + created_by)
+        # -------- Create PurchaseMaster --------
         purchase = PurchaseMaster.objects.create(
             org=request.current_org,
             created_by=request.user,
@@ -1045,7 +1336,7 @@ def save_purchase(request):
             firm=firm,
             vehicleno=vehicleno,
             extra=extra,
-            totalamt=total_amt.quantize(Decimal('0.01')),
+            totalamt=total_amt.quantize(Decimal("0.01")),
             batavpercent=batavpercent,
             batavamt=batavamt,
             dr=dr,
@@ -1058,10 +1349,11 @@ def save_purchase(request):
             remark=request.POST.get("remark", "").strip(),
         )
 
-        # Create details (items only from same org)
+        # -------- Create PurchaseDetails (per item) --------
         for it in items:
             item_id = it.get("item_id")
             item_obj = get_object_or_404(HeadItem, pk=item_id, org=request.current_org)
+
             PurchaseDetails.objects.create(
                 purchasemaster=purchase,
                 item=item_obj,
@@ -1070,14 +1362,159 @@ def save_purchase(request):
                 bnwt=to_decimal(it.get("bnwt", 0)),
                 bo=to_decimal(it.get("bo", 0)),
                 bowt=to_decimal(it.get("bowt", 0)),
+                tbwt=to_decimal(it.get("tbwt", 0)),      # TBWt field in model
                 qty=to_decimal(it.get("qty", 0)),
                 rate=to_decimal(it.get("rate", 0)),
                 amount=to_decimal(it.get("amt", 0)),
                 partywt=to_decimal(it.get("partywt", 0)),
                 millwt=to_decimal(it.get("millwt", 0)),
+                frkwt=to_decimal(it.get("frkwt", 0)),    # FrkWt field in model
                 diffwt=to_decimal(it.get("diffwt", 0)),
                 lotno=it.get("lotno", "").strip(),
             )
+
+        # -------------------------
+        #  EMAIL + PROFESSIONAL PDF INVOICE (like Sale)
+        # -------------------------
+        send_email = request.POST.get("send_email") == "on"
+
+        if send_email and party.email:
+            if FPDF is None:
+                messages.warning(
+                    request,
+                    "Invoice email ke liye 'fpdf' package chahiye. Install: pip install fpdf"
+                )
+            else:
+                def safe_text(val, maxlen=None):
+                    s = "" if val is None else str(val)
+                    s = s.replace("—", "-").replace("–", "-")
+                    s = "".join(ch if ord(ch) < 128 else "?" for ch in s)
+                    return s[:maxlen] if maxlen else s
+
+                try:
+                    # ---------- 1) PDF ----------
+                    pdf = FPDF("P", "mm", "A4")
+                    pdf.set_auto_page_break(auto=True, margin=15)
+                    pdf.set_margins(15, 15, 15)
+                    pdf.add_page()
+
+                    # Top org name
+                    org_name = getattr(purchase.org, "name", str(purchase.org))
+                    pdf.set_font("Helvetica", "B", 16)
+                    pdf.cell(0, 8, safe_text(org_name, 60), ln=1)
+
+                    pdf.set_font("Helvetica", "", 10)
+                    pdf.cell(0, 6, safe_text("Purchase Invoice", 40), ln=1)
+                    pdf.ln(2)
+
+                    # Invoice meta
+                    pdf.set_font("Helvetica", "", 10)
+                    pdf.cell(28, 6, "Invoice No:", 0, 0)
+                    pdf.cell(60, 6, safe_text(purchase.invno), 0, 0)
+                    pdf.cell(20, 6, "Date:", 0, 0)
+                    pdf.cell(0, 6, safe_text(purchase.invdate.strftime("%d-%m-%Y")), 0, 1)
+
+                    pdf.cell(28, 6, "Party:", 0, 0)
+                    pdf.cell(60, 6, safe_text(purchase.party.partyname, 40), 0, 0)
+                    pdf.cell(20, 6, "Vehicle:", 0, 0)
+                    pdf.cell(0, 6, safe_text(purchase.vehicleno or "-", 30), 0, 1)
+
+                    pdf.cell(28, 6, "Firm:", 0, 0)
+                    firm_label = getattr(purchase.firm, "firmname", "") if purchase.firm else ""
+                    pdf.cell(60, 6, safe_text(firm_label, 40), 0, 0)
+                    pdf.cell(20, 6, "Broker:", 0, 0)
+                    pdf.cell(0, 6, safe_text(purchase.broker.brokername, 40), 0, 1)
+
+                    pdf.ln(4)
+
+                    # Items table
+                    headers = ["Item", "Bora", "TBWt", "Qty", "FrkWt", "Rate", "Amount", "LotNo"]
+                    widths  = [45,   15,    18,    15,    18,     22,    25,      22]
+
+                    pdf.set_font("Helvetica", "B", 9)
+                    for i, h in enumerate(headers):
+                        pdf.cell(widths[i], 7, safe_text(h, 20), border=1, align="C")
+                    pdf.ln(7)
+
+                    pdf.set_font("Helvetica", "", 9)
+                    details_qs = PurchaseDetails.objects.filter(purchasemaster=purchase).select_related("item")
+
+                    for d in details_qs:
+                        row = [
+                            safe_text(d.item.item_name, 30),
+                            safe_text(f"{d.bora:.0f}", 5),
+                            safe_text(f"{d.tbwt:.2f}", 10),
+                            safe_text(f"{d.qty:.2f}", 10),
+                            safe_text(f"{d.frkwt:.2f}", 10),
+                            safe_text(f"{d.rate:.2f}", 10),
+                            safe_text(f"{d.amount:.2f}", 12),
+                            safe_text(d.lotno or "", 12),
+                        ]
+                        for i, v in enumerate(row):
+                            align = "R" if i in (1, 2, 3, 4, 5, 6) else "L"
+                            pdf.cell(widths[i], 7, v, border=1, align=align)
+                        pdf.ln(7)
+
+                    pdf.ln(3)
+
+                    # Totals on right side
+                    pdf.set_font("Helvetica", "", 9)
+                    right_x = pdf.w - 15 - 60   # 60mm wide totals box
+                    pdf.set_xy(right_x, pdf.get_y())
+
+                    lines = [
+                        ("Total Amount",    purchase.totalamt),
+                        (f"Batav ({purchase.batavpercent:.2f}%)", purchase.batavamt),
+                        (f"Dr ({purchase.dr:.2f}%)", purchase.dramt),
+                        ("QI + Other",      purchase.qi + purchase.other),
+                        ("Advance",         purchase.advance),
+                        ("Net Amount",      purchase.netamt),
+                    ]
+                    for label, val in lines:
+                        pdf.cell(35, 6, safe_text(label, 30), border=0, align="R")
+                        pdf.cell(25, 6, f"{val:.2f}", border=0, align="R")
+                        pdf.ln(6)
+
+                    # Footer
+                    pdf.ln(4)
+                    pdf.set_x(15)
+                    pdf.set_font("Helvetica", "I", 8)
+                    pdf.cell(0, 5, "This is a system generated invoice.", 0, 1)
+
+                    buf = io.BytesIO()
+                    pdf.output(buf)
+                    buf.seek(0)
+                    pdf_bytes = buf.read()
+
+                    safe_party = "".join(
+                        ch if ord(ch) < 128 else "?" for ch in party.partyname
+                    )[:40]
+
+                    # ---------- 2) Email with attached PDF ----------
+                    subject = f"Purchase Invoice #{purchase.invno}"
+                    body = (
+                        f"Dear {party.partyname},\n\n"
+                        "Please find your purchase invoice attached as PDF.\n\n"
+                        f"Total Amount: {purchase.totalamt:.2f}\n"
+                        f"Net Amount  : {purchase.netamt:.2f}\n\n"
+                        "Thank you."
+                    )
+
+                    email = EmailMessage(
+                        subject,
+                        body,
+                        settings.DEFAULT_FROM_EMAIL,
+                        [party.email],
+                    )
+                    email.attach(
+                        f"purchase_{purchase.invno}_{safe_party}.pdf",
+                        pdf_bytes,
+                        "application/pdf",
+                    )
+                    email.send(fail_silently=False)
+
+                except Exception as e:
+                    messages.warning(request, f"Purchase saved but invoice email not sent: {e}")
 
         messages.success(request, "Purchase entry saved successfully!")
         return redirect("purchasedata")
@@ -1087,90 +1524,95 @@ def save_purchase(request):
         return redirect("purchase_form_new")
 
 
-
 @transaction.atomic
 def update_purchase(request, invno):
     """
-    Update existing PurchaseMaster (scoped to current org).
+    Update an existing PurchaseMaster and its PurchaseDetails — with email + PDF.
     """
     assert getattr(request, "current_org", None) is not None, "current_org missing"
     purchase = get_object_or_404(PurchaseMaster, invno=invno, org=request.current_org)
 
     if request.method != "POST":
-        return redirect('purchase_form_update', invno=invno)
+        return redirect("purchase_form_update", invno=invno)
 
     try:
-        # Header
+        # ---------- HEADER ----------
         invdate_str = request.POST.get("invdate")
-        invdate = datetime.strptime(invdate_str, "%Y-%m-%d").date() if invdate_str else purchase.invdate
+        invdate = (
+            datetime.strptime(invdate_str, "%Y-%m-%d").date()
+            if invdate_str else purchase.invdate
+        )
         awakno = request.POST.get("awakno", "").strip()
-        extra = request.POST.get("extra", "").strip()
         party_pk = request.POST.get("party")
         broker_pk = request.POST.get("broker")
         vehicleno = request.POST.get("vehicleno", "").strip()
+        extra = request.POST.get("extra", "").strip()
 
-        # Items
+        # ---------- ITEMS ----------
         items_json = request.POST.get("items_json") or "[]"
         items = json.loads(items_json)
         if not items:
             messages.error(request, "Add at least one item before saving.")
             return redirect("purchase_form_update", invno=invno)
 
-        # Totals
-        total_amt = Decimal('0')
+        total_amt = Decimal("0")
         for it in items:
             total_amt += to_decimal(it.get("amt", 0))
 
         batavpercent = to_decimal(request.POST.get("batavpercent", 0))
-        batavamt = (total_amt * batavpercent / Decimal('100')).quantize(Decimal('0.01'))
+        batavamt = (total_amt * batavpercent / Decimal("100")).quantize(Decimal("0.01"))
 
         dr = to_decimal(request.POST.get("dr", 0))
-        dramt = (total_amt * dr / Decimal('100')).quantize(Decimal('0.01'))
+        dramt = (total_amt * dr / Decimal("100")).quantize(Decimal("0.01"))
 
         qi = to_decimal(request.POST.get("qi", 0))
         other = to_decimal(request.POST.get("other", 0))
         advance = to_decimal(request.POST.get("advance", 0))
-        total = (total_amt - batavamt - dramt - qi - other).quantize(Decimal('0.01'))
-        netamt = (total - advance).quantize(Decimal('0.01'))
 
-        # Resolve FKs in same org
+        total = (total_amt - batavamt - dramt - qi - other).quantize(Decimal("0.01"))
+        netamt = (total - advance).quantize(Decimal("0.01"))
+
+        # ---------- FOREIGN KEYS ----------
         party = get_object_or_404(HeadParty, pk=party_pk, org=request.current_org)
         broker = get_object_or_404(Broker, pk=broker_pk, org=request.current_org)
-        firm_pk = request.POST.get("firm")
-        # Resolve Firm safely: only include org= when the Firm model actually has that field.
+
         firm = None
+        firm_pk = request.POST.get("firm")
         if firm_pk:
             firm_fields = [f.name for f in Firm._meta.get_fields()]
-            if 'org' in firm_fields:
+            if "org" in firm_fields:
                 firm = get_object_or_404(Firm, pk=firm_pk, org=request.current_org)
             else:
                 firm = get_object_or_404(Firm, pk=firm_pk)
 
-        # Update master
+        # ---------- UPDATE HEADER ----------
         purchase.invdate = invdate
         purchase.awakno = awakno
-        purchase.extra = extra
         purchase.party = party
         purchase.broker = broker
         purchase.vehicleno = vehicleno
-        purchase.totalamt = total_amt.quantize(Decimal('0.01'))
+        purchase.extra = extra
+        purchase.totalamt = total_amt.quantize(Decimal("0.01"))
         purchase.batavpercent = batavpercent
         purchase.batavamt = batavamt
         purchase.dr = dr
         purchase.dramt = dramt
         purchase.qi = qi
         purchase.other = other
-        purchase.total = total
         purchase.advance = advance
+        purchase.total = total
         purchase.netamt = netamt
         purchase.remark = request.POST.get("remark", "").strip()
+        purchase.firm = firm
         purchase.save()
 
-        # Replace details
+        # ---------- REPLACE DETAILS ----------
         PurchaseDetails.objects.filter(purchasemaster=purchase).delete()
+
         for it in items:
-            item_id = it.get("item_id")
-            item_obj = get_object_or_404(HeadItem, pk=item_id, org=request.current_org)
+            item_obj = get_object_or_404(
+                HeadItem, pk=it.get("item_id"), org=request.current_org
+            )
             PurchaseDetails.objects.create(
                 purchasemaster=purchase,
                 item=item_obj,
@@ -1179,14 +1621,138 @@ def update_purchase(request, invno):
                 bnwt=to_decimal(it.get("bnwt", 0)),
                 bo=to_decimal(it.get("bo", 0)),
                 bowt=to_decimal(it.get("bowt", 0)),
+                tbwt=to_decimal(it.get("tbwt", 0)),
                 qty=to_decimal(it.get("qty", 0)),
                 rate=to_decimal(it.get("rate", 0)),
                 amount=to_decimal(it.get("amt", 0)),
                 partywt=to_decimal(it.get("partywt", 0)),
                 millwt=to_decimal(it.get("millwt", 0)),
+                frkwt=to_decimal(it.get("frkwt", 0)),
                 diffwt=to_decimal(it.get("diffwt", 0)),
                 lotno=it.get("lotno", "").strip(),
             )
+
+        # ==========================================================
+        #  EMAIL + PDF AFTER UPDATE (Same as save_purchase)
+        # ==========================================================
+        send_email = request.POST.get("send_email") == "on"
+
+        if send_email and party.email:
+            if FPDF is None:
+                messages.warning(
+                    request, "Invoice email ke liye FPDF install kare: pip install fpdf"
+                )
+            else:
+                def safe_text(v, maxlen=None):
+                    s = "" if v is None else str(v)
+                    s = "".join(ch if ord(ch) < 128 else "?" for ch in s)
+                    return s[:maxlen] if maxlen else s
+
+                try:
+                    # --- PDF ---
+                    pdf = FPDF("P", "mm", "A4")
+                    pdf.set_auto_page_break(auto=True, margin=15)
+                    pdf.set_margins(15, 15, 15)
+                    pdf.add_page()
+
+                    # Header
+                    pdf.set_font("Helvetica", "B", 16)
+                    pdf.cell(0, 8, safe_text(purchase.org.name), ln=1)
+
+                    pdf.set_font("Helvetica", "", 10)
+                    pdf.cell(0, 6, "Purchase Invoice (Updated)", ln=1)
+
+                    pdf.ln(2)
+
+                    # Meta
+                    pdf.cell(30, 6, "Invoice No:", 0, 0)
+                    pdf.cell(50, 6, safe_text(purchase.invno), 0, 0)
+                    pdf.cell(20, 6, "Date:", 0, 0)
+                    pdf.cell(0, 6, purchase.invdate.strftime("%d-%m-%Y"), 0, 1)
+
+                    pdf.cell(30, 6, "Party:", 0, 0)
+                    pdf.cell(50, 6, safe_text(party.partyname), 0, 0)
+                    pdf.cell(20, 6, "Vehicle:", 0, 0)
+                    pdf.cell(0, 6, safe_text(purchase.vehicleno or "-"), 0, 1)
+
+                    pdf.cell(30, 6, "Firm:", 0, 0)
+                    pdf.cell(50, 6, safe_text(purchase.firm.firmname if purchase.firm else ""), 0, 0)
+                    pdf.cell(20, 6, "Broker:", 0, 0)
+                    pdf.cell(0, 6, safe_text(broker.brokername), 0, 1)
+
+                    pdf.ln(4)
+
+                    # Items table
+                    headers = ["Item", "Bora", "TBWt", "Qty", "FrkWt", "Rate", "Amt", "Lot"]
+                    widths  = [45, 15, 18, 15, 18, 22, 25, 22]
+
+                    pdf.set_font("Helvetica", "B", 9)
+                    for i, h in enumerate(headers):
+                        pdf.cell(widths[i], 7, h, border=1, align="C")
+                    pdf.ln(7)
+
+                    pdf.set_font("Helvetica", "", 9)
+                    for d in purchase.details.all():
+                        row = [
+                            safe_text(d.item.item_name, 30),
+                            f"{d.bora:.0f}",
+                            f"{d.tbwt:.2f}",
+                            f"{d.qty:.2f}",
+                            f"{d.frkwt:.2f}",
+                            f"{d.rate:.2f}",
+                            f"{d.amount:.2f}",
+                            safe_text(d.lotno),
+                        ]
+                        for i, v in enumerate(row):
+                            align = "R" if i > 0 else "L"
+                            pdf.cell(widths[i], 7, v, border=1, align=align)
+                        pdf.ln(7)
+
+                    # Totals
+                    pdf.ln(4)
+                    pdf.set_x(pdf.w - 75)
+                    pairs = [
+                        ("Total", purchase.totalamt),
+                        (f"Batav {purchase.batavpercent}%", purchase.batavamt),
+                        (f"DR {purchase.dr}%", purchase.dramt),
+                        ("QI + Other", purchase.qi + purchase.other),
+                        ("Advance", purchase.advance),
+                        ("Net Amount", purchase.netamt),
+                    ]
+                    for label, val in pairs:
+                        pdf.cell(35, 6, label, 0, 0, "R")
+                        pdf.cell(25, 6, f"{val:.2f}", 0, 1, "R")
+
+                    # Convert to bytes
+                    buf = io.BytesIO()
+                    pdf.output(buf)
+                    buf.seek(0)
+                    pdf_bytes = buf.read()
+
+                    # Email
+                    subject = f"Updated Purchase Invoice #{purchase.invno}"
+                    body = (
+                        f"Dear {party.partyname},\n\n"
+                        "Your updated purchase invoice is attached.\n\n"
+                        f"Net Amount: {purchase.netamt:.2f}\n\n"
+                        "Thank you."
+                    )
+
+                    email = EmailMessage(
+                        subject,
+                        body,
+                        settings.DEFAULT_FROM_EMAIL,
+                        [party.email],
+                    )
+                    email.attach(
+                        f"purchase_{purchase.invno}.pdf",
+                        pdf_bytes,
+                        "application/pdf",
+                    )
+                    email.send()
+
+                except Exception as e:
+                    messages.warning(request, f"Invoice updated but email not sent: {e}")
 
         messages.success(request, "Purchase entry updated successfully!")
         return redirect("purchasedata")
@@ -1194,7 +1760,6 @@ def update_purchase(request, invno):
     except Exception as e:
         messages.error(request, f"Error updating purchase: {e}")
         return redirect("purchase_form_update", invno=invno)
-
 
 def purchase_data_view(request):
     """List of purchases (scoped to current org)."""
@@ -1219,6 +1784,7 @@ def purchase_report(request):
     start_date = request.GET.get("start_date")
     end_date = request.GET.get("end_date")
     broker_id = request.GET.get("broker")
+    firm_id = request.GET.get("firm")         # optional firm filter (pk or name)
     report_type = request.GET.get("report_type", "date")
 
     # Default date = today
@@ -1227,14 +1793,34 @@ def purchase_report(request):
     if not end_date:
         end_date = date.today().strftime("%Y-%m-%d")
 
-    # Base queryset
-    purchases = PurchaseMaster.objects.all()
+    # Base queryset (ORG SCOPED) + prefetch details (with item) for the template
+    purchases = (
+        PurchaseMaster.objects
+        .filter(org=request.current_org)
+        .select_related("broker", "firm")   # firm selected for template access
+        .prefetch_related(Prefetch("details", queryset=PurchaseDetails.objects.select_related("item")))
+    )
+
     if start_date:
         purchases = purchases.filter(invdate__gte=parse_date(start_date))
     if end_date:
         purchases = purchases.filter(invdate__lte=parse_date(end_date))
+
+    # Broker filter: allow pk or name, but scoped to org
     if broker_id and broker_id != "all":
-        purchases = purchases.filter(broker__brokername=broker_id)
+        # try as primary key
+        if purchases.filter(broker__pk=broker_id).exists():
+            purchases = purchases.filter(broker__pk=broker_id)
+        else:
+            purchases = purchases.filter(broker__brokername=broker_id)
+
+    # Firm filter: allow pk or name, scoped to org (only apply when provided and not "all")
+    if firm_id and firm_id != "all":
+        # try pk (firm FK)
+        if purchases.filter(firm__pk=firm_id).exists():
+            purchases = purchases.filter(firm__pk=firm_id)
+        else:
+            purchases = purchases.filter(firm__firmname=firm_id)
 
     purchases = purchases.order_by("invdate")
 
@@ -1254,6 +1840,17 @@ def purchase_report(request):
 
         for g in grouped:
             group_purchases = purchases.filter(invdate=g["invdate"])
+            # TBWt & FrkWt sum for this group (sum over details)
+            tbwt_sum = PurchaseDetails.objects.filter(purchasemaster__in=group_purchases).aggregate(
+                total_tbwt=Sum("tbwt")
+            )["total_tbwt"] or 0
+            frkwt_sum = PurchaseDetails.objects.filter(purchasemaster__in=group_purchases).aggregate(
+                total_frkwt=Sum("frkwt")
+            )["total_frkwt"] or 0
+
+            g["total_tbwt"] = tbwt_sum
+            g["total_frkwt"] = frkwt_sum
+
             report_data.append({
                 "group": g["invdate"],
                 "items": group_purchases,
@@ -1276,13 +1873,61 @@ def purchase_report(request):
                 invdate=g["invdate"],
                 broker__brokername=g["broker__brokername"]
             )
+            tbwt_sum = PurchaseDetails.objects.filter(purchasemaster__in=group_purchases).aggregate(
+                total_tbwt=Sum("tbwt")
+            )["total_tbwt"] or 0
+            frkwt_sum = PurchaseDetails.objects.filter(purchasemaster__in=group_purchases).aggregate(
+                total_frkwt=Sum("frkwt")
+            )["total_frkwt"] or 0
+
+            g["total_tbwt"] = tbwt_sum
+            g["total_frkwt"] = frkwt_sum
+
             report_data.append({
                 "group": f"{g['invdate']} - {g['broker__brokername'] or 'No Broker'}",
                 "items": group_purchases,
                 "totals": g
             })
 
-    # Overall Totals
+    elif report_type == "firm":
+        # Group by invdate + firm (firm may be null)
+        grouped = purchases.values("invdate", "firm__firmname").annotate(
+            total_totalamt=Sum("totalamt"),
+            total_batavamt=Sum("batavamt"),
+            total_dramt=Sum("dramt"),
+            total_other=Sum("other"),
+            total_total=Sum("total"),
+            total_advance=Sum("advance"),
+            total_netamt=Sum("netamt"),
+        ).order_by("invdate", "firm__firmname")
+
+        for g in grouped:
+            firm_name = g.get("firm__firmname")  # may be None
+            if firm_name is None:
+                # purchases with NULL firm for that date
+                group_purchases = purchases.filter(invdate=g["invdate"], firm__isnull=True)
+                label_firm = "No Firm"
+            else:
+                group_purchases = purchases.filter(invdate=g["invdate"], firm__firmname=firm_name)
+                label_firm = firm_name
+
+            tbwt_sum = PurchaseDetails.objects.filter(purchasemaster__in=group_purchases).aggregate(
+                total_tbwt=Sum("tbwt")
+            )["total_tbwt"] or 0
+            frkwt_sum = PurchaseDetails.objects.filter(purchasemaster__in=group_purchases).aggregate(
+                total_frkwt=Sum("frkwt")
+            )["total_frkwt"] or 0
+
+            g["total_tbwt"] = tbwt_sum
+            g["total_frkwt"] = frkwt_sum
+
+            report_data.append({
+                "group": f"{g['invdate']} - {label_firm}",
+                "items": group_purchases,
+                "totals": g
+            })
+
+    # Overall Totals (header-level) + TBWt + FrkWt across all details in the filtered set
     overall_totals = purchases.aggregate(
         total_totalamt=Sum("totalamt"),
         total_batavamt=Sum("batavamt"),
@@ -1292,8 +1937,27 @@ def purchase_report(request):
         total_advance=Sum("advance"),
         total_netamt=Sum("netamt"),
     )
+    overall_tbwt = PurchaseDetails.objects.filter(purchasemaster__in=purchases).aggregate(
+        total_tbwt=Sum("tbwt")
+    )["total_tbwt"] or 0
+    overall_frkwt = PurchaseDetails.objects.filter(purchasemaster__in=purchases).aggregate(
+        total_frkwt=Sum("frkwt")
+    )["total_frkwt"] or 0
 
-    brokers = Broker.objects.all()
+    overall_totals["total_tbwt"] = overall_tbwt
+    overall_totals["total_frkwt"] = overall_frkwt
+
+    # Dropdowns also ORG SCOPED
+    brokers = Broker.objects.filter(org=request.current_org).order_by("brokername")
+
+    try:
+        firm_field_names = [f.name for f in Firm._meta.get_fields()]
+        if 'org' in firm_field_names:
+            firms = Firm.objects.filter(org=request.current_org).order_by('firmname')
+        else:
+            firms = Firm.objects.all().order_by('firmname')
+    except Exception:
+        firms = Firm.objects.all().order_by('firmname')
 
     context = {
         "report_data": report_data,
@@ -1301,11 +1965,211 @@ def purchase_report(request):
         "start_date": start_date,
         "end_date": end_date,
         "brokers": brokers,
+        "firms": firms,
         "selected_broker": broker_id if broker_id != "all" else None,
+        "selected_firm": firm_id if firm_id != "all" else None,
         "report_type": report_type,
     }
-
     return render(request, "brokerapp/purchase_report.html", context)
+
+# ===================== PDF (FPDF) =====================
+def purchase_report_pdf(request):
+    """
+    Generate Purchase Report PDF (FPDF) using current filters.
+    Includes per-invoice detail rows with TBWt and FrkWt.
+    Numbers are right-aligned with thousand separators.
+    """
+    # --- build same filtered queryset as HTML purchase report ---
+    start_date = request.GET.get("start_date") or date.today().strftime("%Y-%m-%d")
+    end_date = request.GET.get("end_date") or date.today().strftime("%Y-%m-%d")
+    broker_id = request.GET.get("broker")
+    firm_id = request.GET.get("firm")          # firm filter
+    report_type = request.GET.get("report_type", "date")
+
+    purchases = (
+        PurchaseMaster.objects
+        .filter(org=request.current_org)
+        .select_related("broker", "firm")   # firm selected for template/pdf access
+        .prefetch_related(Prefetch("details", queryset=PurchaseDetails.objects.select_related("item")))
+    )
+    if start_date:
+        purchases = purchases.filter(invdate__gte=parse_date(start_date))
+    if end_date:
+        purchases = purchases.filter(invdate__lte=parse_date(end_date))
+
+    if broker_id and broker_id != "all":
+        if purchases.filter(broker__pk=broker_id).exists():
+            purchases = purchases.filter(broker__pk=broker_id)
+        else:
+            purchases = purchases.filter(broker__brokername=broker_id)
+
+    # APPLY FIRM FILTER (same behavior as in HTML view)
+    if firm_id and firm_id != "all":
+        if purchases.filter(firm__pk=firm_id).exists():
+            purchases = purchases.filter(firm__pk=firm_id)
+        else:
+            purchases = purchases.filter(firm__firmname=firm_id)
+
+    purchases = purchases.order_by("invdate", "invno")
+
+    # group-key helpers (just for headings)
+    if report_type == "date":
+        def group_key(p): return (p.invdate,)
+    elif report_type == "broker":
+        def group_key(p): return (p.invdate, p.broker.brokername if p.broker else "")
+    else:  # report_type == "firm"
+        def group_key(p): return (p.invdate, p.firm.firmname if p.firm else "")
+
+    # --- FPDF setup ---
+    pdf = FPDF(orientation="P", unit="mm", format="A4")
+    pdf.set_auto_page_break(auto=True, margin=12)
+    pdf.add_page()
+    pdf.set_font("Helvetica", "B", 12)
+    pdf.cell(0, 8, "Purchase Report", ln=1, align="C")
+    pdf.set_font("Helvetica", "", 9)
+    hdr = f"From {start_date} To {end_date} | Generated: {timezone.now().strftime('%d-%m-%Y %I:%M %p')}"
+    pdf.cell(0, 6, hdr, ln=1, align="C")
+    pdf.ln(2)
+
+    # --------- MICRO-POLISH HELPERS ----------
+    def fmt2(v):
+        """format number with commas & 2 decimals"""
+        try:
+            return f"{float(v):,.2f}"
+        except Exception:
+            return "0.00"
+
+    def cellR(w, h, txt, **kw):
+        """right-aligned numeric cell"""
+        pdf.cell(w, h, txt, align="R", **kw)
+    # -----------------------------------------
+
+    # headers
+    def draw_invoice_header():
+        pdf.set_fill_color(230, 240, 255)
+        pdf.set_font("Helvetica", "B", 9)
+        # widths adjusted to include Firm column
+        cols = [
+            ("Inv No", 16), ("Date", 20), ("Broker", 30), ("Firm", 30),
+            ("Total", 18), ("Batav", 18), ("DR", 14),
+            ("Other", 14), ("Adv", 14), ("Net", 18),
+        ]
+        for text, w in cols:
+            pdf.cell(w, 7, text, border=1, align="C", fill=True)
+        pdf.ln(7)
+        pdf.set_font("Helvetica", "", 9)
+
+    def draw_detail_header():
+        pdf.set_fill_color(245, 245, 245)
+        pdf.set_font("Helvetica", "B", 8)
+        # Adjusted widths to include FrkWt column
+        cols = [
+            ("Item", 40), ("Bora", 14), ("TBWt", 14),
+            ("Qty", 12), ("Rate", 14), ("Amount", 20),
+            ("PWt", 14), ("MWt", 14), ("FrkWt", 12), ("DWt", 12), ("Lot", 12),
+        ]
+        for text, w in cols:
+            pdf.cell(w, 6, text, border=1, align="C", fill=True)
+        pdf.ln(6)
+        pdf.set_font("Helvetica", "", 8)
+
+    current_group = None
+    draw_invoice_header()
+
+    for p in purchases:
+        key = group_key(p)
+        if current_group is None or key != current_group:
+            # group band
+            pdf.set_font("Helvetica", "B", 9)
+            if report_type == "date":
+                grp_txt = f"Group: {key[0].strftime('%d-%m-%Y')}"
+            elif report_type == "broker":
+                grp_txt = f"Group: {key[0].strftime('%d-%m-%Y')} - {key[1] or 'No Broker'}"
+            else:  # firm grouping
+                grp_txt = f"Group: {key[0].strftime('%d-%m-%Y')} - {key[1] or 'No Firm'}"
+            pdf.ln(2)
+            pdf.set_fill_color(235, 235, 235)
+            pdf.cell(0, 6, grp_txt, ln=1, fill=True)
+            pdf.set_font("Helvetica", "", 9)
+            current_group = key
+
+        # invoice header row
+        pdf.cell(16, 7, str(p.invno), border=1, align="C")
+        pdf.cell(20, 7, p.invdate.strftime("%d-%m-%Y"), border=1, align="C")
+        pdf.cell(30, 7, (p.broker.brokername if p.broker else "")[:28], border=1, align="L")
+        pdf.cell(30, 7, (p.firm.firmname if getattr(p, "firm", None) else "")[:28], border=1, align="L")
+        cellR(18, 7, fmt2(p.totalamt), border=1)
+        cellR(18, 7, fmt2(p.batavamt), border=1)
+        cellR(14, 7, fmt2(p.dramt), border=1)
+        cellR(14, 7, fmt2(p.other), border=1)
+        cellR(14, 7, fmt2(p.advance), border=1)
+        cellR(18, 7, fmt2(p.netamt), border=1)
+        pdf.ln(7)
+
+        # details
+        draw_detail_header()
+        for d in p.details.all():
+            pdf.cell(40, 6, (d.item.item_name or "")[:28], border=1, align="L")
+            cellR(14, 6, fmt2(d.bora), border=1)
+            cellR(14, 6, fmt2(d.tbwt), border=1)
+            cellR(12, 6, fmt2(d.qty), border=1)
+            cellR(14, 6, fmt2(d.rate), border=1)
+            cellR(20, 6, fmt2(d.amount), border=1)
+            cellR(14, 6, fmt2(d.partywt), border=1)
+            cellR(14, 6, fmt2(d.millwt), border=1)
+            cellR(12, 6, fmt2(getattr(d, "frkwt", 0)), border=1)  # FrkWt
+            cellR(12, 6, fmt2(d.diffwt), border=1)
+            pdf.cell(12, 6, (d.lotno or "")[:8], border=1, align="C")
+            pdf.ln(6)
+
+    # overall totals
+    overall = purchases.aggregate(
+        total_totalamt=Sum("totalamt"),
+        total_batavamt=Sum("batavamt"),
+        total_dramt=Sum("dramt"),
+        total_other=Sum("other"),
+        total_advance=Sum("advance"),
+        total_netamt=Sum("netamt"),
+    )
+    overall_tbwt = PurchaseDetails.objects.filter(purchasemaster__in=purchases).aggregate(
+        total_tbwt=Sum("tbwt")
+    )["total_tbwt"] or 0
+    overall_frkwt = PurchaseDetails.objects.filter(purchasemaster__in=purchases).aggregate(
+        total_frkwt=Sum("frkwt")
+    )["total_frkwt"] or 0
+
+    pdf.ln(2)
+    pdf.set_font("Helvetica", "B", 10)
+    pdf.cell(0, 7, "Overall Totals", ln=1)
+    pdf.set_font("Helvetica", "", 9)
+    lines = [
+        f"Total Amt: {fmt2(overall['total_totalamt'] or 0)}",
+        f"Batav Amt: {fmt2(overall['total_batavamt'] or 0)}",
+        f"DR Amt: {fmt2(overall['total_dramt'] or 0)}",
+        f"Other: {fmt2(overall['total_other'] or 0)}",
+        f"Advance: {fmt2(overall['total_advance'] or 0)}",
+        f"Total TBWt: {fmt2(overall_tbwt)}",
+        f"Total FrkWt: {fmt2(overall_frkwt)}",
+        f"Net Amt: {fmt2(overall['total_netamt'] or 0)}",
+    ]
+    for line in lines:
+        pdf.cell(0, 6, line, ln=1)
+
+    # finalize (bytes/str/bytearray -> HttpResponse) — robust for different fpdf versions
+    pdf.alias_nb_pages()
+    filename = f"purchase_report_{start_date}_{end_date}.pdf"
+
+    out = pdf.output(dest="S")  # may return str, bytes or bytearray
+    if isinstance(out, str):
+        pdf_bytes = out.encode("latin-1", "replace")
+    elif isinstance(out, bytearray):
+        pdf_bytes = bytes(out)
+    else:
+        pdf_bytes = out  # already bytes
+
+    resp = HttpResponse(pdf_bytes, content_type="application/pdf")
+    resp["Content-Disposition"] = f'inline; filename="{filename}"'
+    return resp
 
 
 
@@ -2483,6 +3347,113 @@ class PartyStatementView(TemplateView):
         if action in (None, "statement"):
             return self.render_to_response(ctx)
 
+        
+        # ---------- email (PDF attachment via FPDF) ----------
+        if action == "email":
+            # party ke paas email na ho to warning
+            if not getattr(head, "email", None):
+                messages.warning(request, "Selected party has no email address.")
+                return self.render_to_response(ctx)
+
+            if FPDF is None:
+                messages.warning(
+                    request,
+                    "PDF package 'fpdf' not installed. Install with: pip install fpdf",
+                )
+                return self.render_to_response(ctx)
+
+            # helper to avoid FPDF unicode errors (keeps ascii only)
+            def safe_text(val, maxlen=None):
+                s = "" if val is None else str(val)
+                s = s.replace("—", "-").replace("–", "-")
+                s = "".join(ch if ord(ch) < 128 else "?" for ch in s)
+                return s[:maxlen] if maxlen else s
+
+            try:
+                # --- 1) FPDF PDF generate (same style as pdf action) ---
+                pdf = FPDF()
+                pdf.add_page()
+                pdf.set_auto_page_break(auto=True, margin=10)
+
+                # Header
+                pdf.set_font("Helvetica", "B", 14)
+                pdf.cell(0, 10, safe_text(f"Party Statement - {head.partyname}", 140), ln=True, align="C")
+                pdf.set_font("Helvetica", "", 10)
+                pdf.cell(0, 6, safe_text(f"Generated on: {date.today().strftime('%d-%m-%Y')}", 80), ln=True, align="C")
+                pdf.ln(4)
+
+                headers = ["Entry No", "Date", "Debit", "Credit", "Firm", "Remark", "Balance"]
+                widths = widths = [18, 20, 22, 22, 24, 60, 24]
+
+
+                pdf.set_font("Helvetica", "B", 9)
+                for i, h in enumerate(headers):
+                    pdf.cell(widths[i], 8, safe_text(h, 40), border=1, align="C")
+                pdf.ln(8)
+
+                pdf.set_font("Helvetica", "", 9)
+                for e in entries:
+                    vals = [
+                        safe_text(e.get("entry_no", ""), 20),
+                        safe_text(e["date"].strftime("%Y-%m-%d") if e["date"] else "", 20),
+                        safe_text(f"{(e.get('debit') or Decimal('0')):.2f}", 20),
+                        safe_text(f"{(e.get('credit') or Decimal('0')):.2f}", 20),
+                        safe_text(e.get("firm_name", ""), 28),
+                        safe_text(e.get("remark", ""), 120),
+                        safe_text(f"{(e.get('balance') or Decimal('0')):.2f}", 20),
+                    ]
+                    for i, v in enumerate(vals):
+                        pdf.cell(widths[i], 7, v, border=1, align="L" if i in (0, 1, 4) else "R")
+                    pdf.ln(7)
+
+                pdf.set_font("Helvetica", "B", 9)
+                pdf.cell(widths[0] + widths[1], 8, safe_text("TOTAL", 40), border=1, align="L")
+                pdf.cell(widths[2], 8, safe_text(f"{total_debit:.2f}", 20), border=1, align="R")
+                pdf.cell(widths[3], 8, safe_text(f"{total_credit:.2f}", 20), border=1, align="R")
+                pdf.cell(widths[4], 8, "", border=1, align="R")   # Firm blank
+                pdf.cell(widths[5], 8, "", border=1, align="R")   # Remark blank
+                pdf.cell(widths[6], 8, safe_text(f"{balance:.2f}", 20), border=1, align="R")  # Balance total
+
+
+                buf = io.BytesIO()
+                pdf.output(buf)
+                buf.seek(0)
+                pdf_bytes = buf.read()
+
+                safe_name = "".join(ch if ord(ch) < 128 else "?" for ch in head.partyname)[:40]
+
+                # --- 2) Email with PDF attachment ---
+                subject = f"Party Statement - {head.partyname}"
+                body = (
+                    f"Dear {head.partyname},\n\n"
+                    "Please find your detailed party statement attached as PDF.\n\n"
+                    f"Total Debit : {total_debit:.2f}\n"
+                    f"Total Credit: {total_credit:.2f}\n"
+                    f"Balance     : {balance:.2f}\n\n"
+                    "Thank you."
+                )
+
+                email = EmailMessage(
+                    subject,
+                    body,
+                    settings.DEFAULT_FROM_EMAIL,
+                    [head.email],
+                )
+                email.attach(
+                    f"party_statement_{safe_name}.pdf",
+                    pdf_bytes,
+                    "application/pdf",
+                )
+                email.send(fail_silently=False)
+
+                messages.success(request, f"Party statement PDF emailed to {head.email}.")
+
+            except Exception as e:
+                messages.warning(request, f"Statement PDF ready but email not sent: {e}")
+
+            return self.render_to_response(ctx)
+
+        
         # ---------- printable ----------
         if action == "print":
             return render(request, self.printable_template, ctx)
@@ -2561,7 +3532,8 @@ class PartyStatementView(TemplateView):
                 pdf.ln(4)
 
                 headers = ["Entry No", "Date", "Debit", "Credit", "Firm", "Remark", "Balance"]
-                widths = [20, 22, 24, 24, 30, 60, 26]
+                widths = widths = [18, 20, 22, 22, 24, 60, 24]
+
                 pdf.set_font("Helvetica", "B", 9)
                 for i, h in enumerate(headers):
                     pdf.cell(widths[i], 8, safe_text(h, 40), border=1, align="C")
@@ -2586,8 +3558,10 @@ class PartyStatementView(TemplateView):
                 pdf.cell(widths[0] + widths[1], 8, safe_text("TOTAL", 40), border=1, align="L")
                 pdf.cell(widths[2], 8, safe_text(f"{total_debit:.2f}", 20), border=1, align="R")
                 pdf.cell(widths[3], 8, safe_text(f"{total_credit:.2f}", 20), border=1, align="R")
-                pdf.cell(widths[4], 8, "", border=1, align="R")
-                pdf.cell(widths[5], 8, safe_text(f"{balance:.2f}", 20), border=1, align="R")
+                pdf.cell(widths[4], 8, "", border=1, align="R")   # Firm blank
+                pdf.cell(widths[5], 8, "", border=1, align="R")   # Remark blank
+                pdf.cell(widths[6], 8, safe_text(f"{balance:.2f}", 20), border=1, align="R")  # Balance total
+
 
                 buf = io.BytesIO()
                 pdf.output(buf)
