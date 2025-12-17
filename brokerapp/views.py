@@ -174,9 +174,13 @@ def save_sale(request):
         invdate_str = request.POST.get("invdate")
         invdate = datetime.strptime(invdate_str, "%Y-%m-%d").date() if invdate_str else date.today()
         awakno = request.POST.get("awakno", "").strip()
-        extra = request.POST.get("extra", "").strip()
+        extra = request.POST.get("rst_no", "").strip()
         party_pk = request.POST.get("party")
         broker_pk = request.POST.get("broker")
+        # --- Broker compulsory validation ---
+        if not broker_pk:
+            messages.error(request, "Broker is compulsory.")
+            return redirect("sale_form_new")
         firm_pk = request.POST.get("firm")
         vehicleno = request.POST.get("vehicleno", "").strip()
 
@@ -193,8 +197,10 @@ def save_sale(request):
         batavpercent = to_decimal(request.POST.get("batavpercent", 0))
         batavamt = (total_amt * batavpercent / Decimal("100")).quantize(Decimal("0.01"))
 
+        # dr = to_decimal(request.POST.get("dr", 0))
+        # dramt = (total_amt * dr / Decimal("100")).quantize(Decimal("0.01"))
         dr = to_decimal(request.POST.get("dr", 0))
-        dramt = (total_amt * dr / Decimal("100")).quantize(Decimal("0.01"))
+        dramt = (to_decimal(request.POST.get("dramt", 0)) / Decimal("100")).quantize(Decimal("0.01"))
 
         qi = to_decimal(request.POST.get("qi", 0))
         other = to_decimal(request.POST.get("other", 0))
@@ -434,7 +440,8 @@ def update_sale(request, invno):
         party_pk = request.POST.get("party")
         broker_pk = request.POST.get("broker")
         vehicleno = request.POST.get("vehicleno", "").strip()
-        extra = request.POST.get("extra", "").strip()
+        extra = request.POST.get("rst_no", "").strip()
+
 
         # ---------- ITEMS ----------
         items_json = request.POST.get("items_json") or "[]"
@@ -451,7 +458,8 @@ def update_sale(request, invno):
         batavamt = (total_amt * batavpercent / Decimal('100')).quantize(Decimal("0.01"))
 
         dr = to_decimal(request.POST.get("dr", 0))
-        dramt = (total_amt * dr / Decimal('100')).quantize(Decimal("0.01"))
+        dramt = (to_decimal(request.POST.get("dramt", 0)) / Decimal("100")).quantize(Decimal("0.01"))
+
 
         qi = to_decimal(request.POST.get("qi", 0))
         other = to_decimal(request.POST.get("other", 0))

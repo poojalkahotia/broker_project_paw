@@ -1,6 +1,6 @@
 import os
 from pathlib import Path
-import dj_database_url
+# import dj_database_url
 from dotenv import load_dotenv   # ← ADD
 load_dotenv()    
 # -------------------------
@@ -15,19 +15,27 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.environ.get("SECRET_KEY", "fallback-secret-key-for-local-dev")
 
 # Control debug from environment. Default True (local). In Render set DEBUG=False.
-DEBUG = os.environ.get("DEBUG", "True").lower() in ("1", "true", "yes")
-
+#DEBUG = os.environ.get("DEBUG", "True").lower() in ("1", "true", "yes")
+DEBUG = False
 # -------------------------
 # Hosts / CSRF
 # -------------------------
 # During dev we allow all hosts (you can restrict later)
-ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS", "*").split(",")
+ALLOWED_HOSTS = [
+    "yourusername.pythonanywhere.com",
+    "127.0.0.1",
+    "localhost",
+]
+
 
 # Trusted origins for CSRF when served from onrender.com / render.com
 # Add your actual Render service URL to this env var if needed.
-CSRF_TRUSTED_ORIGINS = os.environ.get(
-    "CSRF_TRUSTED_ORIGINS", "https://*.onrender.com,https://*.render.com"
-).split(",")
+# CSRF_TRUSTED_ORIGINS = os.environ.get(
+#     "CSRF_TRUSTED_ORIGINS", "https://*.onrender.com,https://*.render.com"
+# ).split(",")
+CSRF_TRUSTED_ORIGINS = [
+    "https://yourusername.pythonanywhere.com"
+]
 
 # -------------------------
 # Applications
@@ -48,7 +56,7 @@ INSTALLED_APPS = [
 # -------------------------
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
-    "whitenoise.middleware.WhiteNoiseMiddleware",  # serve static files on Render
+    # "whitenoise.middleware.WhiteNoiseMiddleware",  # serve static files on Render
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -85,41 +93,50 @@ WSGI_APPLICATION = "broker_project.wsgi.application"
 # Database (Render-compatible)
 # -------------------------
 # Priority: use DATABASE_URL env var on Render. For local dev, fallback to local Postgres (if present)
-DATABASE_URL = os.environ.get("DATABASE_URL")
+# DATABASE_URL = os.environ.get("DATABASE_URL")
 
-if DATABASE_URL:
-    # Production / Render
-    DATABASES = {
-        "default": dj_database_url.parse(
-            DATABASE_URL,
-            conn_max_age=600,
-            ssl_require=True
-        )
+# if DATABASE_URL:
+#     # Production / Render
+#     DATABASES = {
+#         "default": dj_database_url.parse(
+#             DATABASE_URL,
+#             conn_max_age=600,
+#             ssl_require=True
+#         )
+#     }
+# else:
+#     # Local development: if you run Postgres locally keep these values,
+#     # otherwise install sqlite fallback by uncommenting the sqlite block below.
+#     DATABASES = {
+#         "default": {
+#             "ENGINE": "django.db.backends.postgresql",
+#             "NAME": "broker_project_db",
+#             "USER": "postgres",
+#             "PASSWORD": "keshav1604",
+#             "HOST": "localhost",
+#             "PORT": "5432",
+#             "OPTIONS": {
+#                 "sslmode": "disable"
+#             },
+#         }
+#     }
+#     # If you want sqlite local fallback instead, comment the above and use:
+#     # BASE_DIR = Path(__file__).resolve().parent.parent
+#     # DATABASES = {
+#     #     "default": {
+#     #         "ENGINE": "django.db.backends.sqlite3",
+#     #         "NAME": BASE_DIR / "db.sqlite3",
+#     #     }
+#     # }
+# -------------------------
+# Database (PythonAnywhere FREE – SQLite)
+# -------------------------
+DATABASES = {
+    "default": {
+        "ENGINE": "django.db.backends.sqlite3",
+        "NAME": BASE_DIR / "db.sqlite3",
     }
-else:
-    # Local development: if you run Postgres locally keep these values,
-    # otherwise install sqlite fallback by uncommenting the sqlite block below.
-    DATABASES = {
-        "default": {
-            "ENGINE": "django.db.backends.postgresql",
-            "NAME": "broker_project_db",
-            "USER": "postgres",
-            "PASSWORD": "keshav1604",
-            "HOST": "localhost",
-            "PORT": "5432",
-            "OPTIONS": {
-                "sslmode": "disable"
-            },
-        }
-    }
-    # If you want sqlite local fallback instead, comment the above and use:
-    # BASE_DIR = Path(__file__).resolve().parent.parent
-    # DATABASES = {
-    #     "default": {
-    #         "ENGINE": "django.db.backends.sqlite3",
-    #         "NAME": BASE_DIR / "db.sqlite3",
-    #     }
-    # }
+}
 
 # -------------------------
 # Password validators

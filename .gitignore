@@ -1,14 +1,20 @@
+# Python
 __pycache__/
 *.pyc
-*.pyo
-*.pyd
+
+# Virtual environment
 venv/
-env/
-staticfiles/
-media/
+.env
+
+# Database
 db.sqlite3
-.vscode/
-.idea/
-*.log
-*.env
 *.sqlite3
+
+# Static files
+staticfiles/
+
+# Backups / dumps
+*.sql
+
+# Procfile (Render only)
+Procfile

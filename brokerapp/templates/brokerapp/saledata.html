@@ -20,7 +20,7 @@
                 {% for sale in sales %}
                 <tr>
                     <td>{{ sale.invno }}</td>
-                    <td>{{ sale.invdate|date:"M. j, Y" }}</td>
+                    <td>{{ sale.invdate|date:"d/m/Y" }}</td>
                     <td>{{ sale.party.partyname }}</td>
 
                     <!-- Firm cell (null-safe) -->

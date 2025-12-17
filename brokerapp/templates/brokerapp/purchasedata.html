@@ -20,7 +20,7 @@
                 {% for purchase in purchases %}
                 <tr>
                     <td>{{ purchase.invno }}</td>
-                    <td>{{ purchase.invdate|date:"M. j, Y" }}</td>
+                    <td>{{ purchase.invdate|date:"d/m/Y" }}</td>
                     <td>{{ purchase.party.partyname }}</td>
 
                     <!-- Firm column (null-safe) -->
