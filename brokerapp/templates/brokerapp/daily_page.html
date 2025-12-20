@@ -7,14 +7,14 @@
     <div class="d-flex align-items-center">
       <label class="me-2 fw-semibold mb-0">Date:</label>
       <input type="date" id="dp_date" name="date" class="form-control me-2" style="width:200px"
-             value="{{ selected_date|date:'Y-m-d' }}">
+        value="{{ selected_date|date:'Y-m-d' }}">
       <button id="btn_show" class="btn btn-outline-primary me-2">Show</button>
       <button type="button" id="btn_pdf" class="btn btn-outline-danger">Download PDF</button>
     </div>
   </div>
 
   {% if no_entries %}
-    <div class="alert alert-info">⚠️ <strong>No entry on that day</strong></div>
+  <div class="alert alert-info">⚠️ <strong>No entry on that day</strong></div>
   {% endif %}
 
   <div class="row g-2">
@@ -27,29 +27,23 @@
         </div>
 
         <div class="card-body d-flex flex-column p-2">
-           <form id="jama_form" class="row g-2 align-items-end mb-2">
+          <form id="jama_form" class="row g-2 align-items-end mb-2">
             {% csrf_token %}
             <input type="hidden" id="jama_edit_entry" name="entry_no" value="">
 
             <!-- Amount -->
             <div class="col-md-2">
               <label class="form-label">Amount</label>
-              <input type="text"
-                name="jama_amount"
-                id="jama_amount"
-                class="form-control text-end"
-                inputmode="decimal"
-                autocomplete="off"
-                placeholder="">
+              <input type="text" name="jama_amount" id="jama_amount" class="form-control text-end" inputmode="decimal"
+                autocomplete="off" placeholder="">
             </div>
 
             <!-- Party -->
             <div class="col-md-3">
               <label class="form-label">
-                <a href="{% url 'party_create' %}?next=daily"
-                  title="Open Party (return to Daily after save)"
+                <a href="{% url 'party_create' %}?next=daily" title="Open Party (return to Daily after save)"
                   style="text-decoration:none; color:#0b3d91;">
-                    Party <i class="bi bi-plus-circle"></i>
+                  Party <i class="bi bi-plus-circle"></i>
                 </a>
               </label>
 
@@ -62,10 +56,9 @@
             <!-- Broker -->
             <div class="col-md-2">
               <label class="form-label">
-                <a href="{% url 'broker_create' %}?next=daily"
-                  title="Open Broker (return to Daily after save)"
+                <a href="{% url 'broker_create' %}?next=daily" title="Open Broker (return to Daily after save)"
                   style="text-decoration:none; color:#0b3d91;">
-                    Broker <i class="bi bi-plus-circle"></i>
+                  Broker <i class="bi bi-plus-circle"></i>
                 </a>
               </label>
 
@@ -78,10 +71,9 @@
             <!-- Firm -->
             <div class="col-md-2">
               <label class="form-label">
-                <a href="{% url 'firm' %}?next=daily"
-                  title="Open Firm (return to Daily after save)"
+                <a href="{% url 'firm' %}?next=daily" title="Open Firm (return to Daily after save)"
                   style="text-decoration:none; color:#0b3d91;">
-                    Firm <i class="bi bi-plus-circle"></i>
+                  Firm <i class="bi bi-plus-circle"></i>
                 </a>
               </label>
 
@@ -103,7 +95,8 @@
               <button type="button" id="jama_add_btn" class="btn btn-success btn-icon" title="Add entry">
                 <i class="bi bi-plus-lg"></i>
               </button>
-              <button type="button" id="jama_cancel_btn" class="btn btn-outline-secondary mt-1 d-none btn-icon" title="Cancel update">
+              <button type="button" id="jama_cancel_btn" class="btn btn-outline-secondary mt-1 d-none btn-icon"
+                title="Cancel update">
                 <i class="bi bi-x-circle"></i>
               </button>
             </div>
@@ -111,9 +104,9 @@
 
           <div class="table-responsive flex-grow-1" style="overflow-y:auto;">
             <table class="table table-sm mb-0 table-professional" id="jama_table">
-               <thead>
+              <thead>
                 <tr>
-                  
+
                   <th class="amount-col">Amount</th>
                   <th class="party-col">Party</th>
                   <th class="broker-col">Broker</th>
@@ -124,47 +117,49 @@
               </thead>
               <tbody>
                 {% for j in jama_entries %}
-                  <tr data-entry="{{ j.entry_no }}">
+                <tr data-entry="{{ j.entry_no }}">
 
-                    <td class="amount-col text-end">{{ j.amount|floatformat:0 }}</td>
+                  <td class="amount-col text-end">{{ j.amount|floatformat:0 }}</td>
 
-                    <td>
-                      {% if j.party %}
-                        {% if j.party.partyname %}{{ j.party.partyname }}{% else %}{{ j.party }}{% endif %}
-                      {% else %}
-                        {{ j.party_name|default:'' }}
-                      {% endif %}
-                    </td>
-                    <td>
-                      {% if j.broker %}
-                        {% if j.broker.brokername %}{{ j.broker.brokername }}
-                        {% elif j.broker.name %}{{ j.broker.name }}
-                        {% else %}{{ j.broker }}{% endif %}
-                      {% else %}
-                        {{ j.broker_name|default:'' }}
-                      {% endif %}
-                    </td>
-
-                    <td>
-                    {% if j.firm_name %}
-                      {{ j.firm_name }}
-                    {% elif j.firm %}
-                      {% if j.firm.firmname %}{{ j.firm.firmname }}{% else %}{{ j.firm }}{% endif %}
+                  <td>
+                    {% if j.party %}
+                    {% if j.party.partyname %}{{ j.party.partyname }}{% else %}{{ j.party }}{% endif %}
                     {% else %}
-                      &mdash;
+                    {{ j.party_name|default:'' }}
+                    {% endif %}
+                  </td>
+                  <td>
+                    {% if j.broker %}
+                    {% if j.broker.brokername %}{{ j.broker.brokername }}
+                    {% elif j.broker.name %}{{ j.broker.name }}
+                    {% else %}{{ j.broker }}{% endif %}
+                    {% else %}
+                    {{ j.broker_name|default:'' }}
                     {% endif %}
                   </td>
 
-                    <td>{{ j.remark|default:'' }}</td>
-                    <td>
-                      <button class="btn btn-sm btn-primary jama-update-btn me-1" data-entry="{{ j.entry_no }}" title="Edit" aria-label="Edit entry">
-                        <i class="bi bi-pencil"></i>
-                      </button>
-                      <button class="btn btn-sm btn-danger jama-remove-btn" data-entry="{{ j.entry_no }}" title="Delete" aria-label="Delete entry">
-                        <i class="bi bi-trash"></i>
-                      </button>
-                    </td>
-                  </tr>
+                  <td>
+                    {% if j.firm_name %}
+                    {{ j.firm_name }}
+                    {% elif j.firm %}
+                    {% if j.firm.firmname %}{{ j.firm.firmname }}{% else %}{{ j.firm }}{% endif %}
+                    {% else %}
+                    &mdash;
+                    {% endif %}
+                  </td>
+
+                  <td>{{ j.remark|default:'' }}</td>
+                  <td>
+                    <button class="btn btn-sm btn-primary jama-update-btn me-1" data-entry="{{ j.entry_no }}"
+                      title="Edit" aria-label="Edit entry">
+                      <i class="bi bi-pencil"></i>
+                    </button>
+                    <button class="btn btn-sm btn-danger jama-remove-btn" data-entry="{{ j.entry_no }}" title="Delete"
+                      aria-label="Delete entry">
+                      <i class="bi bi-trash"></i>
+                    </button>
+                  </td>
+                </tr>
                 {% endfor %}
               </tbody>
             </table>
@@ -189,20 +184,14 @@
             <!-- Amount -->
             <div class="col-md-2">
               <label class="form-label">Amount</label>
-              <input type="text"
-                  name="naame_amount"
-                  id="naame_amount"
-                  class="form-control text-end"
-                  inputmode="decimal"
-                  autocomplete="off"
-                  placeholder="">
+              <input type="text" name="naame_amount" id="naame_amount" class="form-control text-end" inputmode="decimal"
+                autocomplete="off" placeholder="">
             </div>
 
             <!-- Party -->
             <div class="col-md-3">
               <label class="form-label">
-                <a href="{% url 'party_create' %}?next=daily"
-                  title="Open Party (return to Daily after save)"
+                <a href="{% url 'party_create' %}?next=daily" title="Open Party (return to Daily after save)"
                   style="text-decoration:none; color:#0b3d91;">
                   Party <i class="bi bi-plus-circle"></i>
                 </a>
@@ -216,8 +205,7 @@
             <!-- Broker -->
             <div class="col-md-2">
               <label class="form-label">
-                <a href="{% url 'broker_create' %}?next=daily"
-                  title="Open Broker (return to Daily after save)"
+                <a href="{% url 'broker_create' %}?next=daily" title="Open Broker (return to Daily after save)"
                   style="text-decoration:none; color:#0b3d91;">
                   Broker <i class="bi bi-plus-circle"></i>
                 </a>
@@ -231,8 +219,7 @@
             <!-- Firm -->
             <div class="col-md-2">
               <label class="form-label">
-                <a href="{% url 'firm' %}?next=daily"
-                  title="Open Firm (return to Daily after save)"
+                <a href="{% url 'firm' %}?next=daily" title="Open Firm (return to Daily after save)"
                   style="text-decoration:none; color:#0b3d91;">
                   Firm <i class="bi bi-plus-circle"></i>
                 </a>
@@ -255,7 +242,8 @@
               <button type="button" id="naame_add_btn" class="btn btn-success btn-icon" title="Add entry">
                 <i class="bi bi-plus-lg"></i>
               </button>
-              <button type="button" id="naame_cancel_btn" class="btn btn-outline-secondary mt-1 d-none btn-icon" title="Cancel update">
+              <button type="button" id="naame_cancel_btn" class="btn btn-outline-secondary mt-1 d-none btn-icon"
+                title="Cancel update">
                 <i class="bi bi-x-circle"></i>
               </button>
             </div>
@@ -263,9 +251,9 @@
 
           <div class="table-responsive flex-grow-1" style="overflow-y:auto;">
             <table class="table table-sm mb-0 table-professional" id="naame_table">
-               <thead>
+              <thead>
                 <tr>
-                  
+
                   <th class="amount-col">Amount</th>
                   <th class="party-col">Party</th>
                   <th class="broker-col">Broker</th>
@@ -275,48 +263,50 @@
                 </tr>
               </thead>
               <tbody>
-                 {% for n in naame_entries %}
-                  <tr data-entry="{{ n.entry_no }}">
+                {% for n in naame_entries %}
+                <tr data-entry="{{ n.entry_no }}">
 
-                    <td class="amount-col text-end">{{ n.amount|floatformat:0 }}</td>
+                  <td class="amount-col text-end">{{ n.amount|floatformat:0 }}</td>
 
-                    <td>
-                      {% if n.party %}
-                        {% if n.party.partyname %}{{ n.party.partyname }}{% else %}{{ n.party }}{% endif %}
-                      {% else %}
-                        {{ n.party_name|default:'' }}
-                      {% endif %}
-                    </td>
-                    <td>
-                      {% if n.broker %}
-                        {% if n.broker.brokername %}{{ n.broker.brokername }}
-                        {% elif n.broker.name %}{{ n.broker.name }}
-                        {% else %}{{ n.broker }}{% endif %}
-                      {% else %}
-                        {{ n.broker_name|default:'' }}
-                      {% endif %}
-                    </td>
+                  <td>
+                    {% if n.party %}
+                    {% if n.party.partyname %}{{ n.party.partyname }}{% else %}{{ n.party }}{% endif %}
+                    {% else %}
+                    {{ n.party_name|default:'' }}
+                    {% endif %}
+                  </td>
+                  <td>
+                    {% if n.broker %}
+                    {% if n.broker.brokername %}{{ n.broker.brokername }}
+                    {% elif n.broker.name %}{{ n.broker.name }}
+                    {% else %}{{ n.broker }}{% endif %}
+                    {% else %}
+                    {{ n.broker_name|default:'' }}
+                    {% endif %}
+                  </td>
 
-                    <td>
-                      {% if n.firm_name %}
-                        {{ n.firm_name }}
-                      {% elif n.firm %}
-                        {% if n.firm.firmname %}{{ n.firm.firmname }}{% else %}{{ n.firm }}{% endif %}
-                      {% else %}
-                        &mdash;
-                      {% endif %}
-                    </td>
+                  <td>
+                    {% if n.firm_name %}
+                    {{ n.firm_name }}
+                    {% elif n.firm %}
+                    {% if n.firm.firmname %}{{ n.firm.firmname }}{% else %}{{ n.firm }}{% endif %}
+                    {% else %}
+                    &mdash;
+                    {% endif %}
+                  </td>
 
-                    <td>{{ n.remark|default:'' }}</td>
-                    <td>
-                      <button class="btn btn-sm btn-primary naame-update-btn me-1" data-entry="{{ n.entry_no }}" title="Edit" aria-label="Edit entry">
-                        <i class="bi bi-pencil"></i>
-                      </button>
-                      <button class="btn btn-sm btn-danger naame-remove-btn" data-entry="{{ n.entry_no }}" title="Delete" aria-label="Delete entry">
-                        <i class="bi bi-trash"></i>
-                      </button>
-                    </td>
-                  </tr>
+                  <td>{{ n.remark|default:'' }}</td>
+                  <td>
+                    <button class="btn btn-sm btn-primary naame-update-btn me-1" data-entry="{{ n.entry_no }}"
+                      title="Edit" aria-label="Edit entry">
+                      <i class="bi bi-pencil"></i>
+                    </button>
+                    <button class="btn btn-sm btn-danger naame-remove-btn" data-entry="{{ n.entry_no }}" title="Delete"
+                      aria-label="Delete entry">
+                      <i class="bi bi-trash"></i>
+                    </button>
+                  </td>
+                </tr>
                 {% endfor %}
               </tbody>
             </table>
@@ -347,296 +337,296 @@
 </div>
 
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-  const dateInput = document.getElementById('dp_date');
-  if (!dateInput.value) dateInput.value = new Date().toISOString().split('T')[0];
+  document.addEventListener('DOMContentLoaded', function () {
+    const dateInput = document.getElementById('dp_date');
+    if (!dateInput.value) dateInput.value = new Date().toISOString().split('T')[0];
 
-  document.getElementById('btn_show').addEventListener('click', function() {
-    const d = dateInput.value;
-    if (!d) return alert('Please select a date.');
-    window.location.href = window.location.pathname + '?date=' + encodeURIComponent(d);
-  });
-
-  const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]') ?
-                    document.querySelector('[name=csrfmiddlewaretoken]').value : '';
-
-  function formatNum(n){ return parseFloat(n||0).toFixed(2); }
-  function sumColumn(sel){
-    let s = 0;
-    document.querySelectorAll(sel + ' tbody tr').forEach(tr => {
-      const v = tr.querySelector('td.amount-col');
-      if (v) s += parseFloat((v.textContent || '').replace(/,/g,'').trim() || 0);
+    document.getElementById('btn_show').addEventListener('click', function () {
+      const d = dateInput.value;
+      if (!d) return alert('Please select a date.');
+      window.location.href = window.location.pathname + '?date=' + encodeURIComponent(d);
     });
-    return s;
-  }
-  function updateTotals(){
-    const j = sumColumn('#jama_table'), n = sumColumn('#naame_table');
-    document.getElementById('jama_total').textContent = formatNum(j);
-    document.getElementById('naame_total').textContent = formatNum(n);
-    document.getElementById('jama_total_display').textContent = formatNum(j);
-    document.getElementById('naame_total_display').textContent = formatNum(n);
-    document.getElementById('diff_display').textContent = formatNum(j - n);
-  }
 
-  const ICON_PLUS = '<i class="bi bi-plus-lg"></i>';
-  const ICON_SAVE = '<i class="bi bi-save"></i>';
-  const ICON_PENCIL = '<i class="bi bi-pencil"></i>';
-  const ICON_TRASH = '<i class="bi bi-trash"></i>';
-  const ICON_CANCEL = '<i class="bi bi-x-circle"></i>';
+    const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]') ?
+      document.querySelector('[name=csrfmiddlewaretoken]').value : '';
 
-  // helper to set add button into "Add" icon
-  function setAddMode(btnId, cancelBtnId){
-    const btn = document.getElementById(btnId);
-    const cancel = document.getElementById(cancelBtnId);
-    if (btn) btn.innerHTML = ICON_PLUS;
-    if (cancel) cancel.classList.add('d-none');
-  }
-  // helper to set add button into "Update" icon
-  function setUpdateMode(btnId, cancelBtnId){
-    const btn = document.getElementById(btnId);
-    const cancel = document.getElementById(cancelBtnId);
-    if (btn) btn.innerHTML = ICON_SAVE;
-    if (cancel) cancel.classList.remove('d-none');
-  }
-
-  // initialize buttons to Add icon
-  setAddMode('jama_add_btn','jama_cancel_btn');
-  setAddMode('naame_add_btn','naame_cancel_btn');
-
-  // Jama Add / Update
-  document.getElementById('jama_add_btn').addEventListener('click', () => {
-    const d = dateInput.value,
-          p = document.getElementById('jama_party').value,
-          b = document.getElementById('jama_broker').value,
-          f = document.getElementById('jama_firm').value,
-          a = document.getElementById('jama_amount').value,
-          r = document.getElementById('jama_remark').value.trim();
-    if (!d || !p || !a) return alert('Please fill Party and Amount for Jama');
-    const editEntry = document.getElementById('jama_edit_entry').value;
-    if (editEntry) {
-      // ---- UPDATED robust Update branch for Jama ----
-      fetch('{% url "daily_page_jama_update" %}', {
-        method: 'POST',
-        headers: {'X-CSRFToken': csrftoken, 'Content-Type': 'application/x-www-form-urlencoded'},
-        body: new URLSearchParams({entry_no: editEntry, date: d, party: p, broker: b, firm: f, amount: a, remark: r})
-      })
-      .then(async r => {
-        const text = await r.text();
-        let data = {};
-        try { data = text ? JSON.parse(text) : {}; } catch(e) { /* ignore parse error */ }
-        if (!r.ok) {
-          const msg = (data && (data.error || data.detail)) ? (data.error || data.detail) : (text || r.statusText);
-          throw new Error(msg);
-        }
-        if (data && data.error) throw new Error(data.error);
-        return data;
-      })
-      .then(data => {
-        const e = data.entry;
-        const tr = document.querySelector(`#jama_table tr[data-entry="${e.entry_no}"]`);
-        if (tr) {
-          tr.children[0].textContent = parseFloat(e.amount || 0).toFixed(2);
-          tr.children[1].textContent = e.party_name || '';
-          tr.children[2].textContent = e.broker_name || '';
-          tr.children[3].textContent = e.firm_name || '';
-          tr.children[4].textContent = e.remark || '';
-        }
-        // reset form / UI to Add mode
-        document.getElementById('jama_edit_entry').value = '';
-        setAddMode('jama_add_btn','jama_cancel_btn');
-        document.getElementById('jama_amount').value = ''; document.getElementById('jama_remark').value = ''; document.getElementById('jama_firm').value = '';
-        updateTotals();
-      })
-      .catch(err => {
-        alert('Failed to update Jama: ' + (err && err.message ? err.message : err));
+    function formatNum(n) { return parseFloat(n || 0).toFixed(2); }
+    function sumColumn(sel) {
+      let s = 0;
+      document.querySelectorAll(sel + ' tbody tr').forEach(tr => {
+        const v = tr.querySelector('td.amount-col');
+        if (v) s += parseFloat((v.textContent || '').replace(/,/g, '').trim() || 0);
       });
-      return;
-      // ---- end Jama update branch ----
-    } else {
-      // Add mode
-      fetch('{% url "daily_page_jama_add" %}', {
-        method: 'POST',
-        headers: {'X-CSRFToken': csrftoken, 'Content-Type': 'application/x-www-form-urlencoded'},
-        body: new URLSearchParams({date: d, party: p, broker: b, firm: f, amount: a, remark: r})
-      })
-      .then(r => r.json())
-      .then(data => {
-        if (data.error) { alert(data.error); return; }
-        const e = data.entry, t = document.querySelector('#jama_table tbody'), tr = document.createElement('tr');
-        tr.dataset.entry = e.entry_no;
-        tr.innerHTML =
-          '<td>' + e.entry_no + '</td>' +
-          '<td class="amount-col text-end">' + (parseFloat(e.amount || 0).toFixed(2)) + '</td>' +
-          '<td>' + (e.party_name || '') + '</td>' +
-          '<td>' + (e.broker_name || '') + '</td>' +
-          '<td>' + (e.firm_name || '') + '</td>' +
-          '<td>' + (e.remark ? String(e.remark) : '') + '</td>' +
-          '<td>' +
-            '<button class="btn btn-sm btn-primary jama-update-btn me-1" data-entry="' + e.entry_no + '" title="Edit">' + ICON_PENCIL + '</button>' +
-            '<button class="btn btn-sm btn-danger jama-remove-btn" data-entry="' + e.entry_no + '" title="Delete">' + ICON_TRASH + '</button>' +
-          '</td>';
-        t.appendChild(tr); updateTotals();
-        document.getElementById('jama_amount').value = ''; document.getElementById('jama_remark').value = ''; document.getElementById('jama_firm').value = '';
-      }).catch(() => alert('Failed to add Jama'));
+      return s;
     }
-  });
-
-  // Naame Add / Update
-  document.getElementById('naame_add_btn').addEventListener('click', () => {
-    const d = dateInput.value,
-          p = document.getElementById('naame_party').value,
-          b = document.getElementById('naame_broker').value,
-          f = document.getElementById('naame_firm').value,
-          a = document.getElementById('naame_amount').value,
-          r = document.getElementById('naame_remark').value.trim();
-    if (!d || !p || !a) return alert('Please fill Party and Amount for Naame');
-    const editEntry = document.getElementById('naame_edit_entry').value;
-    if (editEntry) {
-      // ---- UPDATED robust Update branch for Naame ----
-      fetch('{% url "daily_page_naame_update" %}', {
-        method: 'POST',
-        headers: {'X-CSRFToken': csrftoken, 'Content-Type': 'application/x-www-form-urlencoded'},
-        body: new URLSearchParams({entry_no: editEntry, date: d, party: p, broker: b, firm: f, amount: a, remark: r})
-      })
-      .then(async r => {
-        const text = await r.text();
-        let data = {};
-        try { data = text ? JSON.parse(text) : {}; } catch(e) { /* ignore parse error */ }
-        if (!r.ok) {
-          const msg = (data && (data.error || data.detail)) ? (data.error || data.detail) : (text || r.statusText);
-          throw new Error(msg);
-        }
-        if (data && data.error) throw new Error(data.error);
-        return data;
-      })
-      .then(data => {
-        const e = data.entry;
-        const tr = document.querySelector(`#naame_table tr[data-entry="${e.entry_no}"]`);
-        if (tr) {
-          tr.children[0].textContent = parseFloat(e.amount || 0).toFixed(2);
-          tr.children[1].textContent = e.party_name || '';
-          tr.children[2].textContent = e.broker_name || '';
-          tr.children[3].textContent = e.firm_name || '';
-          tr.children[4].textContent = e.remark || '';
-        }
-        // reset to Add mode
-        document.getElementById('naame_edit_entry').value = '';
-        setAddMode('naame_add_btn','naame_cancel_btn');
-        document.getElementById('naame_amount').value = ''; document.getElementById('naame_remark').value = ''; document.getElementById('naame_firm').value = '';
-        updateTotals();
-      })
-      .catch(err => {
-        alert('Failed to update Naame: ' + (err && err.message ? err.message : err));
-      });
-      return;
-      // ---- end Naame update branch ----
-    } else {
-      // Add mode
-      fetch('{% url "daily_page_naame_add" %}', {
-        method: 'POST',
-        headers: {'X-CSRFToken': csrftoken, 'Content-Type': 'application/x-www-form-urlencoded'},
-        body: new URLSearchParams({date: d, party: p, broker: b, firm: f, amount: a, remark: r})
-      })
-      .then(r => r.json())
-      .then(data => {
-        if (data.error) { alert(data.error); return; }
-        const e = data.entry, t = document.querySelector('#naame_table tbody'), tr = document.createElement('tr');
-        tr.dataset.entry = e.entry_no;
-        tr.innerHTML =
-          '<td>' + e.entry_no + '</td>' +
-          '<td class="amount-col text-end">' + (parseFloat(e.amount || 0).toFixed(2)) + '</td>' +
-          '<td>' + (e.party_name || '') + '</td>' +
-          '<td>' + (e.broker_name || '') + '</td>' +
-          '<td>' + (e.firm_name || '') + '</td>' +
-          '<td>' + (e.remark ? String(e.remark) : '') + '</td>' +
-          '<td>' +
-            '<button class="btn btn-sm btn-primary naame-update-btn me-1" data-entry="' + e.entry_no + '" title="Edit">' + ICON_PENCIL + '</button>' +
-            '<button class="btn btn-sm btn-danger naame-remove-btn" data-entry="' + e.entry_no + '" title="Delete">' + ICON_TRASH + '</button>' +
-          '</td>';
-        t.appendChild(tr); updateTotals();
-        document.getElementById('naame_amount').value = ''; document.getElementById('naame_remark').value = ''; document.getElementById('naame_firm').value = '';
-      }).catch(() => alert('Failed to add Naame'));
-    }
-  });
-
-  // Delegated click handler for Update / Remove buttons
-  document.addEventListener('click', e => {
-    const jamaUpdateBtn = e.target.closest ? e.target.closest('.jama-update-btn') : (e.target.matches && e.target.matches('.jama-update-btn') ? e.target : null);
-    if (jamaUpdateBtn) {
-      const id = jamaUpdateBtn.dataset.entry;
-      const tr = document.querySelector(`#jama_table tr[data-entry="${id}"]`);
-      if (!tr) return;
-      // populate form fields from row cells
-      document.getElementById('jama_edit_entry').value = id;
-      document.getElementById('jama_amount').value = (tr.children[0].textContent || '').replace(/,/g,'').trim();
-      document.getElementById('jama_party').value = tr.children[1].textContent.trim() || '';
-      document.getElementById('jama_broker').value = tr.children[2].textContent.trim() || '';
-      const firmTextJ = tr.children[3].textContent.trim();
-      Array.from(document.getElementById('jama_firm').options).forEach(opt => { opt.selected = (opt.text === firmTextJ); });
-      document.getElementById('jama_remark').value = tr.children[4].textContent.trim() || '';
-      setUpdateMode('jama_add_btn','jama_cancel_btn');
-      return;
+    function updateTotals() {
+      const j = sumColumn('#jama_table'), n = sumColumn('#naame_table');
+      document.getElementById('jama_total').textContent = formatNum(j);
+      document.getElementById('naame_total').textContent = formatNum(n);
+      document.getElementById('jama_total_display').textContent = formatNum(j);
+      document.getElementById('naame_total_display').textContent = formatNum(n);
+      document.getElementById('diff_display').textContent = formatNum(j - n);
     }
 
-    const naameUpdateBtn = e.target.closest ? e.target.closest('.naame-update-btn') : (e.target.matches && e.target.matches('.naame-update-btn') ? e.target : null);
-    if (naameUpdateBtn) {
-      const id = naameUpdateBtn.dataset.entry;
-      const tr = document.querySelector(`#naame_table tr[data-entry="${id}"]`);
-      if (!tr) return;
-      document.getElementById('naame_edit_entry').value = id;
-      document.getElementById('naame_amount').value = (tr.children[0].textContent || '').replace(/,/g,'').trim();
-      document.getElementById('naame_party').value = tr.children[1].textContent.trim() || '';
-      document.getElementById('naame_broker').value = tr.children[2].textContent.trim() || '';
-      const firmTextN = tr.children[3].textContent.trim();
-      Array.from(document.getElementById('naame_firm').options).forEach(opt => { opt.selected = (opt.text === firmTextN); });
-      document.getElementById('naame_remark').value = tr.children[4].textContent.trim() || '';
-      setUpdateMode('naame_add_btn','naame_cancel_btn');
-      return;
+    const ICON_PLUS = '<i class="bi bi-plus-lg"></i>';
+    const ICON_SAVE = '<i class="bi bi-save"></i>';
+    const ICON_PENCIL = '<i class="bi bi-pencil"></i>';
+    const ICON_TRASH = '<i class="bi bi-trash"></i>';
+    const ICON_CANCEL = '<i class="bi bi-x-circle"></i>';
+
+    // helper to set add button into "Add" icon
+    function setAddMode(btnId, cancelBtnId) {
+      const btn = document.getElementById(btnId);
+      const cancel = document.getElementById(cancelBtnId);
+      if (btn) btn.innerHTML = ICON_PLUS;
+      if (cancel) cancel.classList.add('d-none');
+    }
+    // helper to set add button into "Update" icon
+    function setUpdateMode(btnId, cancelBtnId) {
+      const btn = document.getElementById(btnId);
+      const cancel = document.getElementById(cancelBtnId);
+      if (btn) btn.innerHTML = ICON_SAVE;
+      if (cancel) cancel.classList.remove('d-none');
     }
 
-    const jamaRemoveBtn = e.target.closest ? e.target.closest('.jama-remove-btn') : (e.target.matches && e.target.matches('.jama-remove-btn') ? e.target : null);
-    if (jamaRemoveBtn) {
-      const id = jamaRemoveBtn.dataset.entry; if (!confirm('Remove this Jama entry?')) return;
-      fetch(`{% url 'daily_page_jama_delete' 0 %}`.replace('/0/', `/${id}/`), { method:'POST', headers:{'X-CSRFToken': csrftoken} })
-      .then(r => r.json()).then(d => { if (d.success) { document.querySelector(`#jama_table tr[data-entry="${id}"]`)?.remove(); updateTotals(); } else alert('Failed to delete'); });
-      return;
-    }
+    // initialize buttons to Add icon
+    setAddMode('jama_add_btn', 'jama_cancel_btn');
+    setAddMode('naame_add_btn', 'naame_cancel_btn');
 
-    const naameRemoveBtn = e.target.closest ? e.target.closest('.naame-remove-btn') : (e.target.matches && e.target.matches('.naame-remove-btn') ? e.target : null);
-    if (naameRemoveBtn) {
-      const id = naameRemoveBtn.dataset.entry; if (!confirm('Remove this Naame entry?')) return;
-      fetch(`{% url 'daily_page_naame_delete' 0 %}`.replace('/0/', `/${id}/`), { method:'POST', headers:{'X-CSRFToken': csrftoken} })
-      .then(r => r.json()).then(d => { if (d.success) { document.querySelector(`#naame_table tr[data-entry="${id}"]`)?.remove(); updateTotals(); } else alert('Failed to delete'); });
-      return;
-    }
-  });
+    // Jama Add / Update
+    document.getElementById('jama_add_btn').addEventListener('click', () => {
+      const d = dateInput.value,
+        p = document.getElementById('jama_party').value,
+        b = document.getElementById('jama_broker').value,
+        f = document.getElementById('jama_firm').value,
+        a = document.getElementById('jama_amount').value,
+        r = document.getElementById('jama_remark').value.trim();
+      if (!d || !p || !a) return alert('Please fill Party and Amount for Jama');
+      const editEntry = document.getElementById('jama_edit_entry').value;
+      if (editEntry) {
+        // ---- UPDATED robust Update branch for Jama ----
+        fetch('{% url "daily_page_jama_update" %}', {
+          method: 'POST',
+          headers: { 'X-CSRFToken': csrftoken, 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: new URLSearchParams({ entry_no: editEntry, date: d, party: p, broker: b, firm: f, amount: a, remark: r })
+        })
+          .then(async r => {
+            const text = await r.text();
+            let data = {};
+            try { data = text ? JSON.parse(text) : {}; } catch (e) { /* ignore parse error */ }
+            if (!r.ok) {
+              const msg = (data && (data.error || data.detail)) ? (data.error || data.detail) : (text || r.statusText);
+              throw new Error(msg);
+            }
+            if (data && data.error) throw new Error(data.error);
+            return data;
+          })
+          .then(data => {
+            const e = data.entry;
+            const tr = document.querySelector(`#jama_table tr[data-entry="${e.entry_no}"]`);
+            if (tr) {
+              tr.children[0].textContent = parseFloat(e.amount || 0).toFixed(2);
+              tr.children[1].textContent = e.party_name || '';
+              tr.children[2].textContent = e.broker_name || '';
+              tr.children[3].textContent = e.firm_name || '';
+              tr.children[4].textContent = e.remark || '';
+            }
+            // reset form / UI to Add mode
+            document.getElementById('jama_edit_entry').value = '';
+            setAddMode('jama_add_btn', 'jama_cancel_btn');
+            document.getElementById('jama_amount').value = ''; document.getElementById('jama_remark').value = ''; document.getElementById('jama_firm').value = '';
+            updateTotals();
+          })
+          .catch(err => {
+            alert('Failed to update Jama: ' + (err && err.message ? err.message : err));
+          });
+        return;
+        // ---- end Jama update branch ----
+      } else {
+        // Add mode
+        fetch('{% url "daily_page_jama_add" %}', {
+          method: 'POST',
+          headers: { 'X-CSRFToken': csrftoken, 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: new URLSearchParams({ date: d, party: p, broker: b, firm: f, amount: a, remark: r })
+        })
+          .then(r => r.json())
+          .then(data => {
+            if (data.error) { alert(data.error); return; }
+            const e = data.entry, t = document.querySelector('#jama_table tbody'), tr = document.createElement('tr');
+            tr.dataset.entry = e.entry_no;
+            tr.innerHTML =
+              // Removed manual entry_no col to match header
+              '<td class="amount-col text-end">' + (parseFloat(e.amount || 0).toFixed(2)) + '</td>' +
+              '<td>' + (e.party_name || '') + '</td>' +
+              '<td>' + (e.broker_name || '') + '</td>' +
+              '<td>' + (e.firm_name || '') + '</td>' +
+              '<td>' + (e.remark ? String(e.remark) : '') + '</td>' +
+              '<td>' +
+              '<button class="btn btn-sm btn-primary jama-update-btn me-1" data-entry="' + e.entry_no + '" title="Edit">' + ICON_PENCIL + '</button>' +
+              '<button class="btn btn-sm btn-danger jama-remove-btn" data-entry="' + e.entry_no + '" title="Delete">' + ICON_TRASH + '</button>' +
+              '</td>';
+            t.appendChild(tr); updateTotals();
+            document.getElementById('jama_amount').value = ''; document.getElementById('jama_remark').value = ''; document.getElementById('jama_firm').value = '';
+          }).catch(() => alert('Failed to add Jama'));
+      }
+    });
 
-  // Cancel update buttons
-  document.getElementById('jama_cancel_btn').addEventListener('click', () => {
-    document.getElementById('jama_edit_entry').value = '';
-    setAddMode('jama_add_btn','jama_cancel_btn');
-    document.getElementById('jama_amount').value = '';
-    document.getElementById('jama_party').value = '';
-    document.getElementById('jama_broker').value = '';
-    document.getElementById('jama_remark').value = ''; 
-    document.getElementById('jama_firm').value = '';
-  });
-  document.getElementById('naame_cancel_btn').addEventListener('click', () => {
-    document.getElementById('naame_edit_entry').value = '';
-    setAddMode('naame_add_btn','naame_cancel_btn');
-    document.getElementById('naame_amount').value = ''; 
-    document.getElementById('naame_remark').value = ''; 
-    document.getElementById('naame_firm').value = '';
-    document.getElementById('naame_party').value = '';
-    document.getElementById('naame_broker').value = '';
-  });
+    // Naame Add / Update
+    document.getElementById('naame_add_btn').addEventListener('click', () => {
+      const d = dateInput.value,
+        p = document.getElementById('naame_party').value,
+        b = document.getElementById('naame_broker').value,
+        f = document.getElementById('naame_firm').value,
+        a = document.getElementById('naame_amount').value,
+        r = document.getElementById('naame_remark').value.trim();
+      if (!d || !p || !a) return alert('Please fill Party and Amount for Naame');
+      const editEntry = document.getElementById('naame_edit_entry').value;
+      if (editEntry) {
+        // ---- UPDATED robust Update branch for Naame ----
+        fetch('{% url "daily_page_naame_update" %}', {
+          method: 'POST',
+          headers: { 'X-CSRFToken': csrftoken, 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: new URLSearchParams({ entry_no: editEntry, date: d, party: p, broker: b, firm: f, amount: a, remark: r })
+        })
+          .then(async r => {
+            const text = await r.text();
+            let data = {};
+            try { data = text ? JSON.parse(text) : {}; } catch (e) { /* ignore parse error */ }
+            if (!r.ok) {
+              const msg = (data && (data.error || data.detail)) ? (data.error || data.detail) : (text || r.statusText);
+              throw new Error(msg);
+            }
+            if (data && data.error) throw new Error(data.error);
+            return data;
+          })
+          .then(data => {
+            const e = data.entry;
+            const tr = document.querySelector(`#naame_table tr[data-entry="${e.entry_no}"]`);
+            if (tr) {
+              tr.children[0].textContent = parseFloat(e.amount || 0).toFixed(2);
+              tr.children[1].textContent = e.party_name || '';
+              tr.children[2].textContent = e.broker_name || '';
+              tr.children[3].textContent = e.firm_name || '';
+              tr.children[4].textContent = e.remark || '';
+            }
+            // reset to Add mode
+            document.getElementById('naame_edit_entry').value = '';
+            setAddMode('naame_add_btn', 'naame_cancel_btn');
+            document.getElementById('naame_amount').value = ''; document.getElementById('naame_remark').value = ''; document.getElementById('naame_firm').value = '';
+            updateTotals();
+          })
+          .catch(err => {
+            alert('Failed to update Naame: ' + (err && err.message ? err.message : err));
+          });
+        return;
+        // ---- end Naame update branch ----
+      } else {
+        // Add mode
+        fetch('{% url "daily_page_naame_add" %}', {
+          method: 'POST',
+          headers: { 'X-CSRFToken': csrftoken, 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: new URLSearchParams({ date: d, party: p, broker: b, firm: f, amount: a, remark: r })
+        })
+          .then(r => r.json())
+          .then(data => {
+            if (data.error) { alert(data.error); return; }
+            const e = data.entry, t = document.querySelector('#naame_table tbody'), tr = document.createElement('tr');
+            tr.dataset.entry = e.entry_no;
+            tr.innerHTML =
+              // Removed manual entry_no col to match header
+              '<td class="amount-col text-end">' + (parseFloat(e.amount || 0).toFixed(2)) + '</td>' +
+              '<td>' + (e.party_name || '') + '</td>' +
+              '<td>' + (e.broker_name || '') + '</td>' +
+              '<td>' + (e.firm_name || '') + '</td>' +
+              '<td>' + (e.remark ? String(e.remark) : '') + '</td>' +
+              '<td>' +
+              '<button class="btn btn-sm btn-primary naame-update-btn me-1" data-entry="' + e.entry_no + '" title="Edit">' + ICON_PENCIL + '</button>' +
+              '<button class="btn btn-sm btn-danger naame-remove-btn" data-entry="' + e.entry_no + '" title="Delete">' + ICON_TRASH + '</button>' +
+              '</td>';
+            t.appendChild(tr); updateTotals();
+            document.getElementById('naame_amount').value = ''; document.getElementById('naame_remark').value = ''; document.getElementById('naame_firm').value = '';
+          }).catch(() => alert('Failed to add Naame'));
+      }
+    });
 
-  document.getElementById('btn_pdf').addEventListener('click', () => {
-    const d = dateInput.value; if (!d) return alert('Select a date first');
-    window.location.href = `{% url 'daily_page_pdf' %}?date=${d}`;
-  });
+    // Delegated click handler for Update / Remove buttons
+    document.addEventListener('click', e => {
+      const jamaUpdateBtn = e.target.closest ? e.target.closest('.jama-update-btn') : (e.target.matches && e.target.matches('.jama-update-btn') ? e.target : null);
+      if (jamaUpdateBtn) {
+        const id = jamaUpdateBtn.dataset.entry;
+        const tr = document.querySelector(`#jama_table tr[data-entry="${id}"]`);
+        if (!tr) return;
+        // populate form fields from row cells
+        document.getElementById('jama_edit_entry').value = id;
+        document.getElementById('jama_amount').value = (tr.children[0].textContent || '').replace(/,/g, '').trim();
+        document.getElementById('jama_party').value = tr.children[1].textContent.trim() || '';
+        document.getElementById('jama_broker').value = tr.children[2].textContent.trim() || '';
+        const firmTextJ = tr.children[3].textContent.trim();
+        Array.from(document.getElementById('jama_firm').options).forEach(opt => { opt.selected = (opt.text === firmTextJ); });
+        document.getElementById('jama_remark').value = tr.children[4].textContent.trim() || '';
+        setUpdateMode('jama_add_btn', 'jama_cancel_btn');
+        return;
+      }
 
-  updateTotals();
-});
+      const naameUpdateBtn = e.target.closest ? e.target.closest('.naame-update-btn') : (e.target.matches && e.target.matches('.naame-update-btn') ? e.target : null);
+      if (naameUpdateBtn) {
+        const id = naameUpdateBtn.dataset.entry;
+        const tr = document.querySelector(`#naame_table tr[data-entry="${id}"]`);
+        if (!tr) return;
+        document.getElementById('naame_edit_entry').value = id;
+        document.getElementById('naame_amount').value = (tr.children[0].textContent || '').replace(/,/g, '').trim();
+        document.getElementById('naame_party').value = tr.children[1].textContent.trim() || '';
+        document.getElementById('naame_broker').value = tr.children[2].textContent.trim() || '';
+        const firmTextN = tr.children[3].textContent.trim();
+        Array.from(document.getElementById('naame_firm').options).forEach(opt => { opt.selected = (opt.text === firmTextN); });
+        document.getElementById('naame_remark').value = tr.children[4].textContent.trim() || '';
+        setUpdateMode('naame_add_btn', 'naame_cancel_btn');
+        return;
+      }
+
+      const jamaRemoveBtn = e.target.closest ? e.target.closest('.jama-remove-btn') : (e.target.matches && e.target.matches('.jama-remove-btn') ? e.target : null);
+      if (jamaRemoveBtn) {
+        const id = jamaRemoveBtn.dataset.entry; if (!confirm('Remove this Jama entry?')) return;
+        fetch(`{% url 'daily_page_jama_delete' 0 %}`.replace('/0/', `/${id}/`), { method: 'POST', headers: { 'X-CSRFToken': csrftoken } })
+          .then(r => r.json()).then(d => { if (d.success) { document.querySelector(`#jama_table tr[data-entry="${id}"]`)?.remove(); updateTotals(); } else alert('Failed to delete'); });
+        return;
+      }
+
+      const naameRemoveBtn = e.target.closest ? e.target.closest('.naame-remove-btn') : (e.target.matches && e.target.matches('.naame-remove-btn') ? e.target : null);
+      if (naameRemoveBtn) {
+        const id = naameRemoveBtn.dataset.entry; if (!confirm('Remove this Naame entry?')) return;
+        fetch(`{% url 'daily_page_naame_delete' 0 %}`.replace('/0/', `/${id}/`), { method: 'POST', headers: { 'X-CSRFToken': csrftoken } })
+          .then(r => r.json()).then(d => { if (d.success) { document.querySelector(`#naame_table tr[data-entry="${id}"]`)?.remove(); updateTotals(); } else alert('Failed to delete'); });
+        return;
+      }
+    });
+
+    // Cancel update buttons
+    document.getElementById('jama_cancel_btn').addEventListener('click', () => {
+      document.getElementById('jama_edit_entry').value = '';
+      setAddMode('jama_add_btn', 'jama_cancel_btn');
+      document.getElementById('jama_amount').value = '';
+      document.getElementById('jama_party').value = '';
+      document.getElementById('jama_broker').value = '';
+      document.getElementById('jama_remark').value = '';
+      document.getElementById('jama_firm').value = '';
+    });
+    document.getElementById('naame_cancel_btn').addEventListener('click', () => {
+      document.getElementById('naame_edit_entry').value = '';
+      setAddMode('naame_add_btn', 'naame_cancel_btn');
+      document.getElementById('naame_amount').value = '';
+      document.getElementById('naame_remark').value = '';
+      document.getElementById('naame_firm').value = '';
+      document.getElementById('naame_party').value = '';
+      document.getElementById('naame_broker').value = '';
+    });
+
+    document.getElementById('btn_pdf').addEventListener('click', () => {
+      const d = dateInput.value; if (!d) return alert('Select a date first');
+      window.location.href = `{% url 'daily_page_pdf' %}?date=${d}`;
+    });
+
+    updateTotals();
+  });
 </script>
 {% endblock %}
