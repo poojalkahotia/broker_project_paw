@@ -425,12 +425,16 @@
             const e = data.entry;
             const tr = document.querySelector(`#jama_table tr[data-entry="${e.entry_no}"]`);
             if (tr) {
-              tr.children[0].textContent = parseFloat(e.amount || 0).toFixed(2);
-              tr.children[1].textContent = e.party_name || '';
-              tr.children[2].textContent = e.broker_name || '';
-              tr.children[3].textContent = e.firm_name || '';
-              tr.children[4].textContent = e.remark || '';
+              tr.querySelector('td.amount-col').textContent =
+                parseFloat(e.amount || 0).toFixed(2);
+
+              tr.querySelector('td:nth-child(2)').textContent = e.party_name || '';
+              tr.querySelector('td:nth-child(3)').textContent =
+                e.broker_name || document.getElementById('jama_broker').value || '';
+              tr.querySelector('td:nth-child(4)').textContent = e.firm_name || '';
+              tr.querySelector('td:nth-child(5)').textContent = e.remark || '';
             }
+
             // reset form / UI to Add mode
             document.getElementById('jama_edit_entry').value = '';
             setAddMode('jama_add_btn', 'jama_cancel_btn');
@@ -503,12 +507,16 @@
             const e = data.entry;
             const tr = document.querySelector(`#naame_table tr[data-entry="${e.entry_no}"]`);
             if (tr) {
-              tr.children[0].textContent = parseFloat(e.amount || 0).toFixed(2);
-              tr.children[1].textContent = e.party_name || '';
-              tr.children[2].textContent = e.broker_name || '';
-              tr.children[3].textContent = e.firm_name || '';
-              tr.children[4].textContent = e.remark || '';
+              tr.querySelector('td.amount-col').textContent =
+                parseFloat(e.amount || 0).toFixed(2);
+
+              tr.querySelector('td:nth-child(2)').textContent = e.party_name || '';
+              tr.querySelector('td:nth-child(3)').textContent =
+                e.broker_name || document.getElementById('naame_broker').value || '';
+              tr.querySelector('td:nth-child(4)').textContent = e.firm_name || '';
+              tr.querySelector('td:nth-child(5)').textContent = e.remark || '';
             }
+
             // reset to Add mode
             document.getElementById('naame_edit_entry').value = '';
             setAddMode('naame_add_btn', 'naame_cancel_btn');
