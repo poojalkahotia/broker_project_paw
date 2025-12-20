@@ -8,7 +8,7 @@
     </h2>
 
     <form method="POST"
-          action="{% if purchase %}{% url 'update_purchase' purchase.invno %}{% else %}{% url 'save_purchase' %}{% endif %}">
+        action="{% if purchase %}{% url 'update_purchase' purchase.invno %}{% else %}{% url 'save_purchase' %}{% endif %}">
         {% csrf_token %}
         <!-- Hidden JSON -->
         <input type="hidden" name="items_json" id="itemsJson" value='{{ purchase_items_json|default:"[]" }}'>
@@ -19,11 +19,8 @@
             <div class="col-md-3">
                 <div class="d-flex align-items-center">
                     <label class="form-label me-2 mb-0 nowrap-label" style="width: 90px;">Invoice No:</label>
-                    <input type="number" name="invno"
-                           class="form-control form-control-sm"
-                           style="width: 130px;"
-                           value="{{ purchase.invno|default:next_invno }}"
-                           {% if purchase %}readonly{% endif %} required>
+                    <input type="number" name="invno" class="form-control form-control-sm" style="width: 130px;"
+                        value="{{ purchase.invno|default:next_invno }}" {% if purchase %}readonly{% endif %} required>
                 </div>
             </div>
 
@@ -31,10 +28,8 @@
             <div class="col-md-3">
                 <div class="d-flex align-items-center">
                     <label class="form-label me-2 mb-0 nowrap-label" style="width: 95px;">Invoice Date:</label>
-                    <input type="date" name="invdate"
-                           class="form-control form-control-sm"
-                           style="width: 140px;"
-                           value="{{ purchase.invdate|date:'Y-m-d'|default:today_date }}" required>
+                    <input type="date" name="invdate" class="form-control form-control-sm" style="width: 140px;"
+                        value="{{ purchase.invdate|date:'Y-m-d'|default:today_date }}" required>
                 </div>
             </div>
 
@@ -42,10 +37,8 @@
             <div class="col-md-3">
                 <div class="d-flex align-items-center">
                     <label class="form-label me-2 mb-0 nowrap-label" style="width: 80px;">Awak No:</label>
-                    <input type="text" name="awakno"
-                           class="form-control form-control-sm"
-                           style="width: 140px;"
-                           value="{{ purchase.awakno|default:'' }}">
+                    <input type="text" name="awakno" class="form-control form-control-sm" style="width: 140px;"
+                        value="{{ purchase.awakno|default:'' }}">
                 </div>
             </div>
 
@@ -53,10 +46,8 @@
             <div class="col-md-3">
                 <div class="d-flex align-items-center">
                     <label class="form-label me-2 mb-0 nowrap-label" style="width: 90px;">Vehicle No:</label>
-                    <input type="text" name="vehicleno"
-                           class="form-control form-control-sm"
-                           style="width: 140px;"
-                           value="{{ purchase.vehicleno|default:'' }}">
+                    <input type="text" name="vehicleno" class="form-control form-control-sm" style="width: 140px;"
+                        value="{{ purchase.vehicleno|default:'' }}">
                 </div>
             </div>
         </div>
@@ -66,25 +57,25 @@
             <!-- Party -->
             <div class="col-md-3">
                 <div class="d-flex align-items-center mb-2">
-                    <label class="form-label me-2 mb-0" style="width: 80px;">
+                    <label class="form-label me-2 mb-0 text-nowrap" style="width: 120px;">
                         <a href="{% url 'party_create' %}?next=purchase"
-                           title="Open Party (return to Purchase after save)"
-                           style="text-decoration:none; color:#0b3d91;">
+                            title="Open Party (return to Purchase after save)"
+                            style="text-decoration:none; color:#0b3d91;">
                             Party <i class="bi bi-plus-circle"></i>
                         </a>:
                     </label>
 
-                    <select name="party" id="party"
-                            class="form-control form-control-sm flex-grow-1"
-                            onchange="fillPartyDetails()" required>
+                    <select name="party" id="party" class="form-control form-control-sm flex-grow-1"
+                        onchange="fillPartyDetails()" required>
                         <option value="">Select Party</option>
                         {% for p in parties %}
-                            <option value="{{ p.pk }}"
-                                    data-add1="{{ p.add1|default_if_none:'' }}"
-                                    data-email="{{ p.email|default_if_none:'' }}"
-                                    {% if purchase and purchase.party.pk == p.pk %}selected{% endif %}>
-                                {{ p.partyname }}
-                            </option>
+                        {% if purchase and purchase.party.pk == p.pk %}
+                        <option value="{{ p.pk }}" data-add1="{{ p.add1|default_if_none:'' }}"
+                            data-email="{{ p.email|default_if_none:'' }}" selected>{{ p.partyname }}</option>
+                        {% else %}
+                        <option value="{{ p.pk }}" data-add1="{{ p.add1|default_if_none:'' }}"
+                            data-email="{{ p.email|default_if_none:'' }}">{{ p.partyname }}</option>
+                        {% endif %}
                         {% endfor %}
                     </select>
                 </div>
@@ -93,21 +84,22 @@
             <!-- Broker -->
             <div class="col-md-3">
                 <div class="d-flex align-items-center mb-2">
-                    <label class="form-label me-2 mb-0" style="width: 80px;">
+                    <label class="form-label me-2 mb-0 text-nowrap" style="width: 120px;">
                         <a href="{% url 'broker_create' %}?next=purchase"
-                           title="Open Broker (return to Purchase after save)"
-                           style="text-decoration:none; color:#0b3d91;">
+                            title="Open Broker (return to Purchase after save)"
+                            style="text-decoration:none; color:#0b3d91;">
                             Broker <i class="bi bi-plus-circle"></i>
                         </a>:
                     </label>
 
-                    <select name="broker" id="broker"
-                            class="form-control form-control-sm flex-grow-1" required>
+                    <select name="broker" id="broker" class="form-control form-control-sm flex-grow-1" required>
                         <option value="">Select Broker</option>
                         {% for b in brokers %}
-                            <option value="{{ b.pk }}" {% if purchase and purchase.broker.pk == b.pk %}selected{% endif %}>
-                                {{ b.brokername }}
-                            </option>
+                        {% if purchase and purchase.broker.pk == b.pk %}
+                        <option value="{{ b.pk }}" selected>{{ b.brokername }}</option>
+                        {% else %}
+                        <option value="{{ b.pk }}">{{ b.brokername }}</option>
+                        {% endif %}
                         {% endfor %}
                     </select>
                 </div>
@@ -116,45 +108,41 @@
             <!-- Firm -->
             <div class="col-md-3">
                 <div class="d-flex align-items-center mb-2">
-                    <label class="form-label me-2 mb-0" style="width: 80px;">
-                        <a href="{% url 'firm' %}?next=purchase"
-                           title="Open Firm (return to Purchase after save)"
-                           style="text-decoration:none; color:#0b3d91;">
+                    <label class="form-label me-2 mb-0 text-nowrap" style="width: 120px;">
+                        <a href="{% url 'firm' %}?next=purchase" title="Open Firm (return to Purchase after save)"
+                            style="text-decoration:none; color:#0b3d91;">
                             Firm <i class="bi bi-plus-circle"></i>
                         </a>:
                     </label>
 
-                    <select name="firm" id="firm"
-                            class="form-control form-control-sm flex-grow-1">
+                    <select name="firm" id="firm" class="form-control form-control-sm flex-grow-1">
                         <option value="">Select Firm</option>
                         {% for f in firms %}
-                            <option value="{{ f.pk }}" {% if purchase and purchase.firm and purchase.firm.pk == f.pk %}selected{% endif %}>
-                                {{ f.firmname }}
-                            </option>
+                        {% if purchase and purchase.firm and purchase.firm.pk == f.pk %}
+                        <option value="{{ f.pk }}" selected>{{ f.firmname }}</option>
+                        {% else %}
+                        <option value="{{ f.pk }}">{{ f.firmname }}</option>
+                        {% endif %}
                         {% endfor %}
                     </select>
                 </div>
             </div>
 
-            <!-- Extra -->
+            <!-- RST No -->
             <div class="col-md-3">
                 <div class="d-flex align-items-center mb-2">
-                    <label class="form-label me-2 mb-0" style="width: 80px;">Extra:</label>
-                    <input type="text" name="extra" id="extra"
-                           class="form-control form-control-sm flex-grow-1"
-                           value="{{ purchase.extra|default:'' }}">
+                    <label class="form-label me-2 mb-0 text-nowrap" style="width: 120px;">RST No.:</label>
+                    <input type="text" name="rst_no" id="rst_no" class="form-control form-control-sm flex-grow-1"
+                        value="{{ purchase.rst_no|default:'' }}">
                 </div>
             </div>
+
         </div>
 
         <!-- Email Bill Checkbox row (same as Sale) -->
         <div class="row mt-2">
             <div class="col-md-3 d-flex align-items-center">
-                <input type="checkbox"
-                       name="send_email"
-                       id="send_email"
-                       class="form-check-input me-2"
-                       disabled>
+                <input type="checkbox" name="send_email" id="send_email" class="form-check-input me-2" disabled>
                 <label for="send_email" class="form-check-label">
                     Email
                 </label>
@@ -167,17 +155,16 @@
 
             <!-- Item -->
             <div class="col-md-2">
-                <label class="form-label mb-1">
-                    <a href="{% url 'item_create' %}?next=purchase"
-                       title="Open Item (return to Purchase after save)"
-                       style="text-decoration:none; color:#0b3d91;">
+                <label class="form-label mb-1 text-nowrap">
+                    <a href="{% url 'item_create' %}?next=purchase" title="Open Item (return to Purchase after save)"
+                        style="text-decoration:none; color:#0b3d91;">
                         Item <i class="bi bi-plus-circle"></i>
                     </a>
                 </label>
                 <select id="itemSelect" name="itemSelect" class="form-control form-control-sm">
                     <option value="">Select Item</option>
                     {% for it in items %}
-                        <option value="{{ it.pk }}">{{ it.item_name }}</option>
+                    <option value="{{ it.pk }}">{{ it.item_name }}</option>
                     {% endfor %}
                 </select>
             </div>
@@ -185,119 +172,104 @@
             <!-- Bora -->
             <div class="col-md-auto" style="width:75px;">
                 <label class="form-label mb-1">Bora</label>
-                <input type="number" id="bora" name="bora"
-                       class="form-control form-control-sm text-end" step="any">
+                <input type="number" id="bora" name="bora" class="form-control form-control-sm text-end" step="any">
             </div>
 
             <!-- BN -->
             <div class="col-md-auto" style="width:70px;">
                 <label class="form-label mb-1">BN</label>
-                <input type="number" id="bn" name="bn"
-                       class="form-control form-control-sm text-end"
-                       step="any" oninput="computeQtyAndAmountAndUpdateUI()">
+                <input type="number" id="bn" name="bn" class="form-control form-control-sm text-end" step="any"
+                    oninput="computeQtyAndAmountAndUpdateUI()">
             </div>
 
             <!-- BN Wt -->
             <div class="col-md-auto" style="width:60px;">
                 <label class="form-label mb-1">BNWt</label>
-                <input type="number" id="bnwt" name="bnwt"
-                       class="form-control form-control-sm text-end"
-                       step="any" oninput="computeQtyAndAmountAndUpdateUI()">
+                <input type="number" id="bnwt" name="bnwt" class="form-control form-control-sm text-end" step="any"
+                    oninput="computeQtyAndAmountAndUpdateUI()">
             </div>
 
             <!-- BO -->
             <div class="col-md-auto" style="width:70px;">
                 <label class="form-label mb-1">BO</label>
-                <input type="number" id="bo" name="bo"
-                       class="form-control form-control-sm text-end"
-                       step="any" oninput="computeQtyAndAmountAndUpdateUI()">
+                <input type="number" id="bo" name="bo" class="form-control form-control-sm text-end" step="any"
+                    oninput="computeQtyAndAmountAndUpdateUI()">
             </div>
 
             <!-- BO Wt -->
             <div class="col-md-auto" style="width:60px;">
                 <label class="form-label mb-1">BOWt</label>
-                <input type="number" id="bowt" name="bowt"
-                       class="form-control form-control-sm text-end"
-                       step="any" oninput="computeQtyAndAmountAndUpdateUI()">
+                <input type="number" id="bowt" name="bowt" class="form-control form-control-sm text-end" step="any"
+                    oninput="computeQtyAndAmountAndUpdateUI()">
             </div>
 
             <!-- TBWt (before PWt) -->
             <div class="col-md-auto" style="width:60px;">
                 <label class="form-label mb-1">TBWt</label>
-                <input type="number" id="tbwt" name="tbwt"
-                       class="form-control form-control-sm text-end"
-                       step="any" readonly>
+                <input type="number" id="tbwt" name="tbwt" class="form-control form-control-sm text-end" step="any"
+                    readonly>
             </div>
 
             <!-- PWt -->
             <div class="col-md-auto" style="width:60px;">
                 <label class="form-label mb-1">PWt</label>
-                <input type="number" id="partywt" name="partywt"
-                       class="form-control form-control-sm text-end"
-                       step="any" oninput="computeQtyAndAmountAndUpdateUI()">
+                <input type="number" id="partywt" name="partywt" class="form-control form-control-sm text-end"
+                    step="any" oninput="computeQtyAndAmountAndUpdateUI()">
             </div>
 
             <!-- MWt -->
             <div class="col-md-auto" style="width:60px;">
                 <label class="form-label mb-1">MWt</label>
-                <input type="number" id="millwt" name="millwt"
-                       class="form-control form-control-sm text-end"
-                       step="any" oninput="computeQtyAndAmountAndUpdateUI()">
+                <input type="number" id="millwt" name="millwt" class="form-control form-control-sm text-end" step="any"
+                    oninput="computeQtyAndAmountAndUpdateUI()">
             </div>
 
             <!-- DWt -->
             <div class="col-md-auto" style="width:60px;">
                 <label class="form-label mb-1">DWt</label>
-                <input type="number" id="diffwt" name="diffwt"
-                       class="form-control form-control-sm text-end" readonly>
+                <input type="number" id="diffwt" name="diffwt" class="form-control form-control-sm text-end" readonly>
             </div>
 
             <!-- FrkWt (same as Sale) -->
             <div class="col-md-auto" style="width:60px;">
                 <label class="form-label mb-1">FrkWt</label>
-                <input type="number" id="frkwt" name="frkwt"
-                       class="form-control form-control-sm text-end"
-                       step="any"
-                       {% if frkwt and frkwt|floatformat != '0.00' %}value="{{ frkwt }}"{% endif %}
-                       oninput="computeQtyAndAmountAndUpdateUI()">
+                <input type="number" id="frkwt" name="frkwt" class="form-control form-control-sm text-end" step="any"
+                    value="{% if frkwt and frkwt|floatformat != '0.00' %}{{ frkwt }}{% endif %}"
+                    oninput="computeQtyAndAmountAndUpdateUI()">
+
             </div>
 
             <!-- Qty -->
             <div class="col-md-auto" style="width:70px;">
                 <label class="form-label mb-1">Qty</label>
-                <input type="number" id="qty" name="qty"
-                       class="form-control form-control-sm text-end" readonly>
+                <input type="number" id="qty" name="qty" class="form-control form-control-sm text-end" readonly>
             </div>
 
             <!-- Rate -->
             <div class="col-md-auto" style="width:70px;">
                 <label class="form-label mb-1">Rate</label>
-                <input type="number" id="rate"
-                       class="form-control form-control-sm text-end"
-                       step="any" oninput="computeQtyAndAmountAndUpdateUI()">
+                <input type="number" id="rate" class="form-control form-control-sm text-end" step="any"
+                    oninput="computeQtyAndAmountAndUpdateUI()">
             </div>
 
             <!-- Amount -->
             <div class="col-md-auto" style="width:80px;">
                 <label class="form-label mb-1">Amt</label>
-                <input type="number" id="lineAmount"
-                       class="form-control form-control-sm text-end" readonly>
+                <input type="number" id="lineAmount" class="form-control form-control-sm text-end" readonly>
             </div>
 
             <!-- Lot No -->
             <div class="col-md-auto" style="width:80px;">
                 <label class="form-label mb-1">LotNo</label>
                 <!-- Enter on this will jump to Add button -->
-                <input type="text" id="lotno" name="lotno"
-                       class="form-control form-control-sm lotno"
-                       maxlength="50" data-next="#addItemBtn">
+                <input type="text" id="lotno" name="lotno" class="form-control form-control-sm lotno" maxlength="50"
+                    data-next="#addItemBtn">
             </div>
 
             <!-- Add Button -->
             <div class="col-md-auto" style="width:80px;">
                 <label class="form-label mb-1 text-white">.</label>
-                <button type="button" id="addItemBtn"
-                        class="btn btn-success btn-sm w-100">
+                <button type="button" id="addItemBtn" class="btn btn-success btn-sm w-100">
                     Add
                 </button>
             </div>
@@ -339,9 +311,8 @@
             <div class="col-md-6">
                 <div class="d-flex align-items-center mb-2">
                     <label for="remark" class="form-label me-2 mb-0" style="width: 100px;">Remark:</label>
-                    <input type="text" id="remark" name="remark"
-                           class="form-control form-control-sm flex-grow-1"
-                           value="{{ purchase.remark|default:'' }}">
+                    <input type="text" id="remark" name="remark" class="form-control form-control-sm flex-grow-1"
+                        value="{{ purchase.remark|default:'' }}">
                 </div>
             </div>
 
@@ -350,74 +321,64 @@
                 <!-- Total Amount -->
                 <div class="d-flex align-items-center justify-content-end mb-2">
                     <label for="totalamt" class="form-label me-2 mb-0">Total Amount:</label>
-                    <input type="number" id="totalamt" name="totalamt"
-                           class="form-control text-end w-50" readonly
-                           value="{{ purchase.totalamt|default_if_none:'' }}">
+                    <input type="number" id="totalamt" name="totalamt" class="form-control text-end w-50" readonly
+                        value="{{ purchase.totalamt|default_if_none:'' }}">
                 </div>
 
                 <!-- Batav -->
                 <div class="d-flex align-items-center justify-content-end mb-2">
                     <label class="form-label me-2 mb-0">Batav:</label>
                     <input type="number" step="any" id="batavpercent" name="batavpercent"
-                           class="form-control text-end w-25 me-2"
-                           value="{{ purchase.batavpercent|default_if_none:'' }}">
-                    <input type="number" step="any" id="batavamt" name="batavamt"
-                           class="form-control text-end w-25"
-                           readonly value="{{ purchase.batavamt|default_if_none:'' }}">
+                        class="form-control text-end w-25 me-2" value="{{ purchase.batavpercent|default_if_none:'' }}">
+                    <input type="number" step="any" id="batavamt" name="batavamt" class="form-control text-end w-25"
+                        readonly value="{{ purchase.batavamt|default_if_none:'' }}">
                 </div>
 
                 <!-- Dalali -->
                 <div class="d-flex align-items-center justify-content-end mb-2">
                     <label class="form-label me-2 mb-0">Dalali:</label>
-                    <input type="number" step="any" id="dr" name="dr"
-                           class="form-control text-end w-25 me-2"
-                           value="{{ purchase.dr|default_if_none:'' }}">
-                    <input type="number" step="any" id="dramt" name="dramt"
-                           class="form-control text-end w-25"
-                           readonly value="{{ purchase.dramt|default_if_none:'' }}">
+                    <input type="number" step="any" id="dr" name="dr" class="form-control text-end w-25 me-2"
+                        value="{{ purchase.dr|default_if_none:'' }}">
+                    <input type="number" step="any" id="dramt" name="dramt" class="form-control text-end w-25" readonly
+                        value="{{ purchase.dramt|default_if_none:'' }}">
                 </div>
 
                 <!-- QI per-lot (same pattern as Sale) -->
                 <div class="d-flex align-items-center justify-content-end mb-2">
                     <label class="form-label me-2 mb-0">QI per Lot:</label>
-                    <input type="number" step="any" id="qi_per" name="qi_per"
-                           class="form-control text-end w-25 me-2"
-                           value="0.00">
-                    <input type="number" step="any" id="qi_total" name="qi"
-                           class="form-control text-end w-25"
-                           readonly value="{{ purchase.qi|default_if_none:'0.00' }}">
+                    <input type="number" step="any" id="qi_per" name="qi_per" class="form-control text-end w-25 me-2"
+                        value="0.00">
+                    <input type="number" step="any" id="qi_total" name="qi" class="form-control text-end w-25" readonly
+                        value="{{ purchase.qi|default_if_none:'0.00' }}">
                 </div>
 
                 <!-- Other -->
                 <div class="d-flex align-items-center justify-content-end mb-2">
                     <label for="other" class="form-label me-2 mb-0">Other:</label>
-                    <input type="number" step="any" id="other" name="other"
-                           class="form-control text-end w-50"
-                           value="{{ purchase.other|default_if_none:'' }}">
+                    <input type="number" step="any" id="other" name="other" class="form-control text-end w-50"
+                        value="{{ purchase.other|default_if_none:'' }}">
                 </div>
 
                 <!-- Total -->
                 <div class="d-flex align-items-center justify-content-end mb-2">
                     <label for="total" class="form-label me-2 mb-0">Total:</label>
-                    <input type="number" id="total" name="total"
-                           class="form-control text-end w-50" readonly
-                           value="{{ purchase.total|default_if_none:'' }}">
+                    <input type="number" id="total" name="total" class="form-control text-end w-50" readonly
+                        value="{{ purchase.total|default_if_none:'' }}">
                 </div>
 
                 <!-- Advance -->
                 <div class="d-flex align-items-center justify-content-end mb-2">
                     <label for="advance" class="form-label me-2 mb-0">Advance:</label>
-                    <input type="number" step="any" id="advance" name="advance"
-                           class="form-control text-end w-50"
-                           value="{{ purchase.advance|default_if_none:'' }}">
+                    <input type="number" step="any" id="advance" name="advance" class="form-control text-end w-50"
+                        value="{{ purchase.advance|default_if_none:'' }}">
                 </div>
 
                 <!-- Net Amount -->
                 <div class="d-flex align-items-center justify-content-end">
                     <label for="netamt" class="form-label me-2 mb-0">Net Amount:</label>
                     <input type="number" id="netamt" name="netamt"
-                           class="form-control text-end w-50 fw-bold text-success"
-                           readonly value="{{ purchase.netamt|default_if_none:'' }}">
+                        class="form-control text-end w-50 fw-bold text-success" readonly
+                        value="{{ purchase.netamt|default_if_none:'' }}">
                 </div>
             </div>
         </div>
@@ -432,105 +393,105 @@
 
 
 <script>
-/* ===== Helper functions ===== */
-function getFloat(id){ 
-    const el = document.getElementById(id); 
-    if(!el) return 0; 
-    const v = parseFloat(el.value); 
-    return isNaN(v) ? 0 : v; 
-}
-function setVal(id, val){ 
-    const el = document.getElementById(id); 
-    if(!el) return; 
-    el.value = (val === null || val === undefined) ? '' : Number(val).toFixed(2); 
-}
-
-/* ===== Items array ===== */
-let itemsJsonEl = document.getElementById('itemsJson');
-let itemsArray = [];
-try { 
-    if(itemsJsonEl && itemsJsonEl.value) itemsArray = JSON.parse(itemsJsonEl.value); 
-} catch(e){ itemsArray = []; }
-let editingIndex = null;
-
-/* ===== Compute Bora / TBWt ===== */
-function computeBoraParts(){ 
-    const bn = getFloat('bn'); 
-    const bnwt = getFloat('bnwt'); 
-    const bo = getFloat('bo'); 
-    const bowt = getFloat('bowt'); 
-    const totalBora = (bn * bnwt * 0.01) + (bo * bowt * 0.01);
-    setVal('tbwt', totalBora);   // TBWt mirrors this
-    return { totalBora };  
-}
-
-/* ===== Compute Qty and Amount ===== */
-function computeQtyAndAmountAndUpdateUI(){
-    const { totalBora } = computeBoraParts();    // this is TBWt
-    const partywt = getFloat('partywt');
-    const millwt = getFloat('millwt');
-    const rate = getFloat('rate');
-    const frkwt = getFloat('frkwt'); // user-entered FrkWt
-
-    // Difference Weight (party - mill)
-    const diff = partywt - millwt;
-    setVal('diffwt', diff);
-
-    // Qty = min(PWt, MWt) - TBWt - FrkWt. Never below 0.
-    const tbwt = Number(totalBora) || 0;
-    const minWt = Math.min(Number(partywt) || 0, Number(millwt) || 0);
-    const qty = Math.max(0, minWt - tbwt - frkwt);
-    setVal('qty', qty);
-    
-    // Amount calculation (project-specific 0.01 factor)
-    let amount = 0;
-    if (qty > 0 && rate !== 0) {
-        amount = qty * rate * 0.01;
+    /* ===== Helper functions ===== */
+    function getFloat(id) {
+        const el = document.getElementById(id);
+        if (!el) return 0;
+        const v = parseFloat(el.value);
+        return isNaN(v) ? 0 : v;
     }
-    setVal('lineAmount', amount);
+    function setVal(id, val) {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.value = (val === null || val === undefined) ? '' : Number(val).toFixed(2);
+    }
 
-    return { qty, amount };
-}
+    /* ===== Items array ===== */
+    let itemsJsonEl = document.getElementById('itemsJson');
+    let itemsArray = [];
+    try {
+        if (itemsJsonEl && itemsJsonEl.value) itemsArray = JSON.parse(itemsJsonEl.value);
+    } catch (e) { itemsArray = []; }
+    let editingIndex = null;
 
-/* ===== Update Summary ===== */
-function updateSummary(){
-    let totalamt = 0;
-    itemsArray.forEach(it => totalamt += Number(it.amt||0));
-    setVal('totalamt', totalamt);
+    /* ===== Compute Bora / TBWt ===== */
+    function computeBoraParts() {
+        const bn = getFloat('bn');
+        const bnwt = getFloat('bnwt');
+        const bo = getFloat('bo');
+        const bowt = getFloat('bowt');
+        const totalBora = (bn * bnwt * 0.01) + (bo * bowt * 0.01);
+        setVal('tbwt', totalBora);   // TBWt mirrors this
+        return { totalBora };
+    }
 
-    // Batav: % of total amount
-    const batavamt = totalamt * (getFloat('batavpercent') / 100);
-    setVal('batavamt', batavamt);
+    /* ===== Compute Qty and Amount ===== */
+    function computeQtyAndAmountAndUpdateUI() {
+        const { totalBora } = computeBoraParts();    // this is TBWt
+        const partywt = getFloat('partywt');
+        const millwt = getFloat('millwt');
+        const rate = getFloat('rate');
+        const frkwt = getFloat('frkwt'); // user-entered FrkWt
 
-    // Dalali: 'dr' as per-unit * total qty across items
-    let totalQty = 0;
-    itemsArray.forEach(it => { totalQty += Number(it.qty || 0); });
-    const drPerUnit = getFloat('dr');
-    const dramt = drPerUnit * totalQty;
-    setVal('dramt', dramt);
+        // Difference Weight (party - mill)
+        const diff = partywt - millwt;
+        setVal('diffwt', diff);
 
-    // QI amount is in #qi_total (name="qi")
-    const qiAmt = getFloat('qi_total');
+        // Qty = min(PWt, MWt) - TBWt - FrkWt. Never below 0.
+        const tbwt = Number(totalBora) || 0;
+        const minWt = Math.min(Number(partywt) || 0, Number(millwt) || 0);
+        const qty = Math.max(0, minWt - tbwt - frkwt);
+        setVal('qty', qty);
 
-    // Final totals
-    const total = totalamt - batavamt - dramt - qiAmt - getFloat('other');
-    setVal('total', total);
-    setVal('netamt', total - getFloat('advance'));
+        // Amount calculation (project-specific 0.01 factor)
+        let amount = 0;
+        if (qty > 0 && rate !== 0) {
+            amount = qty * rate * 0.01;
+        }
+        setVal('lineAmount', amount);
 
-    // Persist array to hidden JSON
-    if(itemsJsonEl) itemsJsonEl.value = JSON.stringify(itemsArray);
-}
+        return { qty, amount };
+    }
 
-/* ===== Update Items Table ===== */
-function updateUI() {
-    const tbody = document.getElementById('addedItemsTableBody');
-    if (!tbody) return;
-    tbody.innerHTML = '';
+    /* ===== Update Summary ===== */
+    function updateSummary() {
+        let totalamt = 0;
+        itemsArray.forEach(it => totalamt += Number(it.amt || 0));
+        setVal('totalamt', totalamt);
 
-    itemsArray.forEach((it, idx) => {
-        const tr = document.createElement('tr');
+        // Batav: % of total amount
+        const batavamt = totalamt * (getFloat('batavpercent') / 100);
+        setVal('batavamt', batavamt);
 
-        tr.innerHTML = `
+        // Dalali: 'dr' as per-unit * total qty across items
+        let totalQty = 0;
+        itemsArray.forEach(it => { totalQty += Number(it.qty || 0); });
+        const drPerUnit = getFloat('dr');
+        const dramt = drPerUnit * totalQty;
+        setVal('dramt', dramt);
+
+        // QI amount is in #qi_total (name="qi")
+        const qiAmt = getFloat('qi_total');
+
+        // Final totals
+        const total = totalamt - batavamt - dramt - qiAmt - getFloat('other');
+        setVal('total', total);
+        setVal('netamt', total - getFloat('advance'));
+
+        // Persist array to hidden JSON
+        if (itemsJsonEl) itemsJsonEl.value = JSON.stringify(itemsArray);
+    }
+
+    /* ===== Update Items Table ===== */
+    function updateUI() {
+        const tbody = document.getElementById('addedItemsTableBody');
+        if (!tbody) return;
+        tbody.innerHTML = '';
+
+        itemsArray.forEach((it, idx) => {
+            const tr = document.createElement('tr');
+
+            tr.innerHTML = `
             <td>${it.item_name}</td>
             <td>${Number(it.bora).toFixed(2)}</td>
 
@@ -557,257 +518,257 @@ function updateUI() {
             </td>
         `;
 
-        tbody.appendChild(tr);
-    });
-
-    updateSummary();
-}
-
-/* ===== Reset Form Fields ===== */
-function resetAddFormFields(){
-    // Clear select and LotNo explicitly
-    const sel = document.getElementById('itemSelect');
-    if (sel) sel.value = '';
-    const lotEl = document.getElementById('lotno');
-    if (lotEl) lotEl.value = '';
-
-    // Editable numeric inputs: blank for fresh typing
-    ['bora','bn','bnwt','bo','bowt','partywt','millwt','frkwt','rate'].forEach(id=>{
-        const el = document.getElementById(id);
-        if(el) el.value = '';
-    });
-
-    // Computed / readonly fields: 0.00
-    ['tbwt','qty','lineAmount','diffwt'].forEach(id=>{
-        setVal(id, 0);
-    });
-
-    editingIndex = null;
-    const btn = document.getElementById('addItemBtn');
-    if(btn){
-        btn.textContent = 'Add';
-        btn.classList.remove('btn-primary');
-        btn.classList.add('btn-success');
-    }
-}
-
-/* ===== Add / Update Item ===== */
-const addBtnEl = document.getElementById('addItemBtn');
-if(addBtnEl){
-    addBtnEl.addEventListener('click', function(){
-        const itemSelect = document.getElementById('itemSelect'); 
-        if(!itemSelect || !itemSelect.value){ alert('Select item'); return; }
-        const itemName = itemSelect.options[itemSelect.selectedIndex].text;
-
-        const bora = getFloat('bora'), bn = getFloat('bn'), bnwt = getFloat('bnwt'),
-              bo = getFloat('bo'), bowt = getFloat('bowt'),
-              partywt = getFloat('partywt'), millwt = getFloat('millwt'), rate = getFloat('rate'),
-              frkwt = getFloat('frkwt'),
-              lotno = (document.getElementById('lotno') && document.getElementById('lotno').value) ? document.getElementById('lotno').value : '';
-
-        const {qty, amount} = computeQtyAndAmountAndUpdateUI();
-        const tbwt = getFloat('tbwt'); // AFTER compute so it's updated
-
-        const newItem = {
-            item_id: itemSelect.value,
-            item_name: itemName,
-            bora,
-            bn,
-            bnwt,
-            bo,
-            bowt,
-            tbwt,
-            qty,
-            rate,
-            amt: amount,
-            frkwt,
-            partywt,
-            millwt,
-            diffwt: partywt - millwt,
-            lotno
-        };
-
-        if(editingIndex !== null){
-            itemsArray[editingIndex] = newItem;
-        } else {
-            itemsArray.push(newItem);
-        }
-
-        if(itemsJsonEl) itemsJsonEl.value = JSON.stringify(itemsArray);
-
-        updateUI();
-        resetAddFormFields();
-
-        // focus Remark after row is added
-        setTimeout(() => {
-          const remark = document.querySelector('#id_remark, #remark');
-          if (remark) {
-            try {
-              remark.focus({preventScroll: false});
-              if (typeof remark.select === 'function') remark.select();
-            } catch(e) {
-              remark.focus();
-            }
-          }
-        }, 120);
-    });
-}
-
-/* ===== Remove / Edit ===== */
-function removeItem(idx){ itemsArray.splice(idx,1); updateUI(); }
-
-function editItem(idx){
-    const it = itemsArray[idx];
-    if(!it) return;
-    editingIndex = idx;
-
-    document.getElementById('itemSelect').value = it.item_id;
-    setVal('bora', it.bora);
-    setVal('bn', it.bn);
-    setVal('bnwt', it.bnwt);
-    setVal('bo', it.bo);
-    setVal('bowt', it.bowt);
-    setVal('tbwt', it.tbwt || 0);
-    setVal('qty', it.qty);
-    setVal('rate', it.rate);
-    setVal('lineAmount', it.amt);
-    setVal('partywt', it.partywt);
-    setVal('millwt', it.millwt);
-    setVal('diffwt', it.diffwt);
-    setVal('frkwt', it.frkwt || 0);
-    document.getElementById('lotno').value = it.lotno;
-
-    const btn = document.getElementById('addItemBtn');
-    if(btn){
-        btn.textContent='Update Item';
-        btn.classList.replace('btn-success','btn-primary');
-    }
-}
-
-/* ===== DOMContentLoaded ===== */
-document.addEventListener('DOMContentLoaded', function(){ 
-    if(itemsArray.length) updateUI(); 
-    computeQtyAndAmountAndUpdateUI(); 
-    updateSummary();
-
-    // TBWt auto-calculated, lock input
-    const tbwtEl = document.getElementById('tbwt');
-    if (tbwtEl) tbwtEl.readOnly = true;
-
-    // F1 shortcut for BNWT = 0.58
-    const bnwtEl = document.getElementById('bnwt');
-    if(bnwtEl){
-        bnwtEl.addEventListener('keydown', function(e){
-            if(e.key === 'F1' || e.keyCode === 112){
-                e.preventDefault();
-                this.value = 0.58;
-                computeQtyAndAmountAndUpdateUI();
-                const nextEl = document.getElementById('bo');
-                if(nextEl) nextEl.focus();
-            }
+            tbody.appendChild(tr);
         });
-    }
 
-    // F1 -> 0.70 in BOWt
-    const bowtEl = document.getElementById('bowt');
-    if (bowtEl) {
-        bowtEl.addEventListener('keydown', function (e) {
-            if (e.key === 'F1' || e.keyCode === 112) {
-                e.preventDefault();
-                this.value = 0.70;
-                if (typeof computeQtyAndAmountAndUpdateUI === 'function') computeQtyAndAmountAndUpdateUI();
-                const nextEl = document.getElementById('tbwt');
-                if (nextEl) nextEl.focus();
-            }
-        });
-    }
-
-    // Enter navigation in compact row
-    const order = ['bnwt','bo','bowt','tbwt','partywt','millwt','frkwt','rate'];
-    order.forEach((id, idx)=>{
-        const el = document.getElementById(id);
-        if(el){
-            el.addEventListener('keydown', function(e){
-                if(e.key === 'Enter'){
-                    e.preventDefault();
-                    const next = order[idx+1];
-                    if(next){
-                        const nextEl = document.getElementById(next);
-                        if(nextEl) nextEl.focus();
-                    }
-                    computeQtyAndAmountAndUpdateUI();
-                }
-            });
-        }
-    });
-
-    // Live summary updates (Batav, Dalali, QI, Other, Advance)
-    ['batavpercent','dr','qi_total','other','advance'].forEach(id => {
-        const el = document.getElementById(id);
-        if(el){
-            el.addEventListener('input', function(){
-                updateSummary();
-            });
-        }
-    });
-
-    // Fields that affect line amount
-    ['partywt','millwt','frkwt','rate','bn','bnwt','bo','bowt','tbwt'].forEach(id => {
-        const el = document.getElementById(id);
-        if(el){
-            el.addEventListener('input', function(){
-                computeQtyAndAmountAndUpdateUI();
-                if(itemsArray.length) updateSummary();
-            });
-        }
-    });
-
-    /* ===== QI Auto Calculation (per-lot) ===== */
-    const qiPerInput = document.getElementById('qi_per');
-    const qiTotalInput = document.getElementById('qi_total');
-    const itemsBody = document.getElementById('addedItemsTableBody');
-
-    function updateQI(){
-        if(!qiPerInput || !qiTotalInput || !itemsBody) return;
-        const perLot = parseFloat(qiPerInput.value) || 0;
-        const lotCount = itemsBody.querySelectorAll('tr').length;
-        const total = perLot * lotCount;
-        qiTotalInput.value = total.toFixed(2);
         updateSummary();
     }
 
-    if(qiPerInput){
-        qiPerInput.addEventListener('input', updateQI);
-    }
+    /* ===== Reset Form Fields ===== */
+    function resetAddFormFields() {
+        // Clear select and LotNo explicitly
+        const sel = document.getElementById('itemSelect');
+        if (sel) sel.value = '';
+        const lotEl = document.getElementById('lotno');
+        if (lotEl) lotEl.value = '';
 
-    const qiObserver = new MutationObserver(updateQI);
-    if(itemsBody){
-        qiObserver.observe(itemsBody, {childList: true});
-    }
+        // Editable numeric inputs: blank for fresh typing
+        ['bora', 'bn', 'bnwt', 'bo', 'bowt', 'partywt', 'millwt', 'frkwt', 'rate'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.value = '';
+        });
 
-    updateQI();
-}); // DOMContentLoaded end
+        // Computed / readonly fields: 0.00
+        ['tbwt', 'qty', 'lineAmount', 'diffwt'].forEach(id => {
+            setVal(id, 0);
+        });
 
-// Enable/disable checkbox based on selected party email
-const partySelect = document.getElementById("party");
-const sendEmailChk = document.getElementById("send_email");
-if (partySelect && sendEmailChk){
-    function updateEmailCheckbox() {
-        const opt = partySelect.options[partySelect.selectedIndex];
-        const email = opt ? opt.getAttribute("data-email") : "";
-
-        if (email && email.trim() !== "") {
-            sendEmailChk.disabled = false;
-            sendEmailChk.checked = true;
-        } else {
-            sendEmailChk.disabled = true;
-            sendEmailChk.checked = false;
+        editingIndex = null;
+        const btn = document.getElementById('addItemBtn');
+        if (btn) {
+            btn.textContent = 'Add';
+            btn.classList.remove('btn-primary');
+            btn.classList.add('btn-success');
         }
     }
 
-    updateEmailCheckbox();
-    partySelect.addEventListener("change", updateEmailCheckbox);
-}
+    /* ===== Add / Update Item ===== */
+    const addBtnEl = document.getElementById('addItemBtn');
+    if (addBtnEl) {
+        addBtnEl.addEventListener('click', function () {
+            const itemSelect = document.getElementById('itemSelect');
+            if (!itemSelect || !itemSelect.value) { alert('Select item'); return; }
+            const itemName = itemSelect.options[itemSelect.selectedIndex].text;
+
+            const bora = getFloat('bora'), bn = getFloat('bn'), bnwt = getFloat('bnwt'),
+                bo = getFloat('bo'), bowt = getFloat('bowt'),
+                partywt = getFloat('partywt'), millwt = getFloat('millwt'), rate = getFloat('rate'),
+                frkwt = getFloat('frkwt'),
+                lotno = (document.getElementById('lotno') && document.getElementById('lotno').value) ? document.getElementById('lotno').value : '';
+
+            const { qty, amount } = computeQtyAndAmountAndUpdateUI();
+            const tbwt = getFloat('tbwt'); // AFTER compute so it's updated
+
+            const newItem = {
+                item_id: itemSelect.value,
+                item_name: itemName,
+                bora,
+                bn,
+                bnwt,
+                bo,
+                bowt,
+                tbwt,
+                qty,
+                rate,
+                amt: amount,
+                frkwt,
+                partywt,
+                millwt,
+                diffwt: partywt - millwt,
+                lotno
+            };
+
+            if (editingIndex !== null) {
+                itemsArray[editingIndex] = newItem;
+            } else {
+                itemsArray.push(newItem);
+            }
+
+            if (itemsJsonEl) itemsJsonEl.value = JSON.stringify(itemsArray);
+
+            updateUI();
+            resetAddFormFields();
+
+            // focus Remark after row is added
+            setTimeout(() => {
+                const remark = document.querySelector('#id_remark, #remark');
+                if (remark) {
+                    try {
+                        remark.focus({ preventScroll: false });
+                        if (typeof remark.select === 'function') remark.select();
+                    } catch (e) {
+                        remark.focus();
+                    }
+                }
+            }, 120);
+        });
+    }
+
+    /* ===== Remove / Edit ===== */
+    function removeItem(idx) { itemsArray.splice(idx, 1); updateUI(); }
+
+    function editItem(idx) {
+        const it = itemsArray[idx];
+        if (!it) return;
+        editingIndex = idx;
+
+        document.getElementById('itemSelect').value = it.item_id;
+        setVal('bora', it.bora);
+        setVal('bn', it.bn);
+        setVal('bnwt', it.bnwt);
+        setVal('bo', it.bo);
+        setVal('bowt', it.bowt);
+        setVal('tbwt', it.tbwt || 0);
+        setVal('qty', it.qty);
+        setVal('rate', it.rate);
+        setVal('lineAmount', it.amt);
+        setVal('partywt', it.partywt);
+        setVal('millwt', it.millwt);
+        setVal('diffwt', it.diffwt);
+        setVal('frkwt', it.frkwt || 0);
+        document.getElementById('lotno').value = it.lotno;
+
+        const btn = document.getElementById('addItemBtn');
+        if (btn) {
+            btn.textContent = 'Update Item';
+            btn.classList.replace('btn-success', 'btn-primary');
+        }
+    }
+
+    /* ===== DOMContentLoaded ===== */
+    document.addEventListener('DOMContentLoaded', function () {
+        if (itemsArray.length) updateUI();
+        computeQtyAndAmountAndUpdateUI();
+        updateSummary();
+
+        // TBWt auto-calculated, lock input
+        const tbwtEl = document.getElementById('tbwt');
+        if (tbwtEl) tbwtEl.readOnly = true;
+
+        // F1 shortcut for BNWT = 0.58
+        const bnwtEl = document.getElementById('bnwt');
+        if (bnwtEl) {
+            bnwtEl.addEventListener('keydown', function (e) {
+                if (e.key === 'F1' || e.keyCode === 112) {
+                    e.preventDefault();
+                    this.value = 0.58;
+                    computeQtyAndAmountAndUpdateUI();
+                    const nextEl = document.getElementById('bo');
+                    if (nextEl) nextEl.focus();
+                }
+            });
+        }
+
+        // F1 -> 0.70 in BOWt
+        const bowtEl = document.getElementById('bowt');
+        if (bowtEl) {
+            bowtEl.addEventListener('keydown', function (e) {
+                if (e.key === 'F1' || e.keyCode === 112) {
+                    e.preventDefault();
+                    this.value = 0.70;
+                    if (typeof computeQtyAndAmountAndUpdateUI === 'function') computeQtyAndAmountAndUpdateUI();
+                    const nextEl = document.getElementById('tbwt');
+                    if (nextEl) nextEl.focus();
+                }
+            });
+        }
+
+        // Enter navigation in compact row
+        const order = ['bnwt', 'bo', 'bowt', 'tbwt', 'partywt', 'millwt', 'frkwt', 'rate'];
+        order.forEach((id, idx) => {
+            const el = document.getElementById(id);
+            if (el) {
+                el.addEventListener('keydown', function (e) {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        const next = order[idx + 1];
+                        if (next) {
+                            const nextEl = document.getElementById(next);
+                            if (nextEl) nextEl.focus();
+                        }
+                        computeQtyAndAmountAndUpdateUI();
+                    }
+                });
+            }
+        });
+
+        // Live summary updates (Batav, Dalali, QI, Other, Advance)
+        ['batavpercent', 'dr', 'qi_total', 'other', 'advance'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) {
+                el.addEventListener('input', function () {
+                    updateSummary();
+                });
+            }
+        });
+
+        // Fields that affect line amount
+        ['partywt', 'millwt', 'frkwt', 'rate', 'bn', 'bnwt', 'bo', 'bowt', 'tbwt'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) {
+                el.addEventListener('input', function () {
+                    computeQtyAndAmountAndUpdateUI();
+                    if (itemsArray.length) updateSummary();
+                });
+            }
+        });
+
+        /* ===== QI Auto Calculation (per-lot) ===== */
+        const qiPerInput = document.getElementById('qi_per');
+        const qiTotalInput = document.getElementById('qi_total');
+        const itemsBody = document.getElementById('addedItemsTableBody');
+
+        function updateQI() {
+            if (!qiPerInput || !qiTotalInput || !itemsBody) return;
+            const perLot = parseFloat(qiPerInput.value) || 0;
+            const lotCount = itemsBody.querySelectorAll('tr').length;
+            const total = perLot * lotCount;
+            qiTotalInput.value = total.toFixed(2);
+            updateSummary();
+        }
+
+        if (qiPerInput) {
+            qiPerInput.addEventListener('input', updateQI);
+        }
+
+        const qiObserver = new MutationObserver(updateQI);
+        if (itemsBody) {
+            qiObserver.observe(itemsBody, { childList: true });
+        }
+
+        updateQI();
+    }); // DOMContentLoaded end
+
+    // Enable/disable checkbox based on selected party email
+    const partySelect = document.getElementById("party");
+    const sendEmailChk = document.getElementById("send_email");
+    if (partySelect && sendEmailChk) {
+        function updateEmailCheckbox() {
+            const opt = partySelect.options[partySelect.selectedIndex];
+            const email = opt ? opt.getAttribute("data-email") : "";
+
+            if (email && email.trim() !== "") {
+                sendEmailChk.disabled = false;
+                sendEmailChk.checked = true;
+            } else {
+                sendEmailChk.disabled = true;
+                sendEmailChk.checked = false;
+            }
+        }
+
+        updateEmailCheckbox();
+        partySelect.addEventListener("change", updateEmailCheckbox);
+    }
 </script>
 
 {% endblock %}

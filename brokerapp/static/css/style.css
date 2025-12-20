@@ -148,12 +148,12 @@ input[type="number"]::-webkit-outer-spin-button {
 /* ===== Hide EntryNo column in Daily Page tables =====
    Remove or comment this block to make EntryNo visible again
    -------------------------------------------------------- */
-#jama_table th:first-child,
+/* #jama_table th:first-child,
 #jama_table td:first-child,
 #naame_table th:first-child,
 #naame_table td:first-child {
   display: none !important;
-}
+} */
 /* keeps layout consistent even when EntryNo is hidden */
 .table-professional th,
 .table-professional td {
@@ -360,3 +360,41 @@ input[type="number"]::-webkit-outer-spin-button {
   box-sizing: border-box;
 }
 .btn-icon i { font-size: 1.05rem; line-height:1; }
+
+/* ===== Daily Page FINAL FIX (override existing rules) ===== */
+#jama_table,
+#naame_table {
+  font-size: 0.82rem !important;
+  table-layout: fixed;
+  width: 100%;
+}
+
+/* remove vertical + horizontal scrollbar ONLY on daily page */
+#jama_table,
+#naame_table {
+  overflow: visible !important;
+}
+
+#jama_table th,
+#jama_table td,
+#naame_table th,
+#naame_table td {
+  padding: 0.3rem 0.45rem !important;
+  white-space: normal !important;
+}
+
+/* IMPORTANT: kill max-height causing scrollbar */
+#jama_table,
+#naame_table {
+  max-height: none !important;
+}
+
+/* action column compact */
+#jama_table th:last-child,
+#jama_table td:last-child,
+#naame_table th:last-child,
+#naame_table td:last-child {
+  width: 60px !important;
+  min-width: 60px !important;
+  text-align: center;
+}

@@ -16,13 +16,13 @@ SECRET_KEY = os.environ.get("SECRET_KEY", "fallback-secret-key-for-local-dev")
 
 # Control debug from environment. Default True (local). In Render set DEBUG=False.
 #DEBUG = os.environ.get("DEBUG", "True").lower() in ("1", "true", "yes")
-DEBUG = False
+DEBUG = True
 # -------------------------
 # Hosts / CSRF
 # -------------------------
 # During dev we allow all hosts (you can restrict later)
 ALLOWED_HOSTS = [
-    "yourusername.pythonanywhere.com",
+    "pooja11121980.pythonanywhere.com",
     "127.0.0.1",
     "localhost",
 ]
@@ -34,7 +34,7 @@ ALLOWED_HOSTS = [
 #     "CSRF_TRUSTED_ORIGINS", "https://*.onrender.com,https://*.render.com"
 # ).split(",")
 CSRF_TRUSTED_ORIGINS = [
-    "https://yourusername.pythonanywhere.com"
+    "https://pooja11121980.pythonanywhere.com"
 ]
 
 # -------------------------

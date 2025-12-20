@@ -34,7 +34,13 @@
             <!-- Amount -->
             <div class="col-md-2">
               <label class="form-label">Amount</label>
-              <input type="number" name="jama_amount" id="jama_amount" class="form-control text-end" step="0.01">
+              <input type="text"
+                name="jama_amount"
+                id="jama_amount"
+                class="form-control text-end"
+                inputmode="decimal"
+                autocomplete="off"
+                placeholder="">
             </div>
 
             <!-- Party -->
@@ -107,7 +113,7 @@
             <table class="table table-sm mb-0 table-professional" id="jama_table">
                <thead>
                 <tr>
-                  <th style="width:70px">EntryNo</th>
+                  
                   <th class="amount-col">Amount</th>
                   <th class="party-col">Party</th>
                   <th class="broker-col">Broker</th>
@@ -119,8 +125,9 @@
               <tbody>
                 {% for j in jama_entries %}
                   <tr data-entry="{{ j.entry_no }}">
-                    <td>{{ j.entry_no }}</td>
-                    <td class="amount-col text-end">{{ j.amount }}</td>
+
+                    <td class="amount-col text-end">{{ j.amount|floatformat:0 }}</td>
+
                     <td>
                       {% if j.party %}
                         {% if j.party.partyname %}{{ j.party.partyname }}{% else %}{{ j.party }}{% endif %}
@@ -182,7 +189,13 @@
             <!-- Amount -->
             <div class="col-md-2">
               <label class="form-label">Amount</label>
-              <input type="number" name="naame_amount" id="naame_amount" class="form-control text-end" step="0.01">
+              <input type="text"
+                  name="naame_amount"
+                  id="naame_amount"
+                  class="form-control text-end"
+                  inputmode="decimal"
+                  autocomplete="off"
+                  placeholder="">
             </div>
 
             <!-- Party -->
@@ -252,7 +265,7 @@
             <table class="table table-sm mb-0 table-professional" id="naame_table">
                <thead>
                 <tr>
-                  <th style="width:70px">EntryNo</th>
+                  
                   <th class="amount-col">Amount</th>
                   <th class="party-col">Party</th>
                   <th class="broker-col">Broker</th>
@@ -264,8 +277,9 @@
               <tbody>
                  {% for n in naame_entries %}
                   <tr data-entry="{{ n.entry_no }}">
-                    <td>{{ n.entry_no }}</td>
-                    <td class="amount-col text-end">{{ n.amount }}</td>
+
+                    <td class="amount-col text-end">{{ n.amount|floatformat:0 }}</td>
+
                     <td>
                       {% if n.party %}
                         {% if n.party.partyname %}{{ n.party.partyname }}{% else %}{{ n.party }}{% endif %}
@@ -421,11 +435,11 @@ document.addEventListener('DOMContentLoaded', function() {
         const e = data.entry;
         const tr = document.querySelector(`#jama_table tr[data-entry="${e.entry_no}"]`);
         if (tr) {
-          tr.children[1].textContent = parseFloat(e.amount || 0).toFixed(2);
-          tr.children[2].textContent = e.party_name || '';
-          tr.children[3].textContent = e.broker_name || '';
-          tr.children[4].textContent = e.firm_name || '';
-          tr.children[5].textContent = e.remark || '';
+          tr.children[0].textContent = parseFloat(e.amount || 0).toFixed(2);
+          tr.children[1].textContent = e.party_name || '';
+          tr.children[2].textContent = e.broker_name || '';
+          tr.children[3].textContent = e.firm_name || '';
+          tr.children[4].textContent = e.remark || '';
         }
         // reset form / UI to Add mode
         document.getElementById('jama_edit_entry').value = '';
@@ -499,11 +513,11 @@ document.addEventListener('DOMContentLoaded', function() {
         const e = data.entry;
         const tr = document.querySelector(`#naame_table tr[data-entry="${e.entry_no}"]`);
         if (tr) {
-          tr.children[1].textContent = parseFloat(e.amount || 0).toFixed(2);
-          tr.children[2].textContent = e.party_name || '';
-          tr.children[3].textContent = e.broker_name || '';
-          tr.children[4].textContent = e.firm_name || '';
-          tr.children[5].textContent = e.remark || '';
+          tr.children[0].textContent = parseFloat(e.amount || 0).toFixed(2);
+          tr.children[1].textContent = e.party_name || '';
+          tr.children[2].textContent = e.broker_name || '';
+          tr.children[3].textContent = e.firm_name || '';
+          tr.children[4].textContent = e.remark || '';
         }
         // reset to Add mode
         document.getElementById('naame_edit_entry').value = '';
@@ -554,12 +568,12 @@ document.addEventListener('DOMContentLoaded', function() {
       if (!tr) return;
       // populate form fields from row cells
       document.getElementById('jama_edit_entry').value = id;
-      document.getElementById('jama_amount').value = (tr.children[1].textContent || '').replace(/,/g,'').trim();
-      document.getElementById('jama_party').value = tr.children[2].textContent.trim() || '';
-      document.getElementById('jama_broker').value = tr.children[3].textContent.trim() || '';
-      const firmTextJ = tr.children[4].textContent.trim();
+      document.getElementById('jama_amount').value = (tr.children[0].textContent || '').replace(/,/g,'').trim();
+      document.getElementById('jama_party').value = tr.children[1].textContent.trim() || '';
+      document.getElementById('jama_broker').value = tr.children[2].textContent.trim() || '';
+      const firmTextJ = tr.children[3].textContent.trim();
       Array.from(document.getElementById('jama_firm').options).forEach(opt => { opt.selected = (opt.text === firmTextJ); });
-      document.getElementById('jama_remark').value = tr.children[5].textContent.trim() || '';
+      document.getElementById('jama_remark').value = tr.children[4].textContent.trim() || '';
       setUpdateMode('jama_add_btn','jama_cancel_btn');
       return;
     }
@@ -570,12 +584,12 @@ document.addEventListener('DOMContentLoaded', function() {
       const tr = document.querySelector(`#naame_table tr[data-entry="${id}"]`);
       if (!tr) return;
       document.getElementById('naame_edit_entry').value = id;
-      document.getElementById('naame_amount').value = (tr.children[1].textContent || '').replace(/,/g,'').trim();
-      document.getElementById('naame_party').value = tr.children[2].textContent.trim() || '';
-      document.getElementById('naame_broker').value = tr.children[3].textContent.trim() || '';
-      const firmTextN = tr.children[4].textContent.trim();
+      document.getElementById('naame_amount').value = (tr.children[0].textContent || '').replace(/,/g,'').trim();
+      document.getElementById('naame_party').value = tr.children[1].textContent.trim() || '';
+      document.getElementById('naame_broker').value = tr.children[2].textContent.trim() || '';
+      const firmTextN = tr.children[3].textContent.trim();
       Array.from(document.getElementById('naame_firm').options).forEach(opt => { opt.selected = (opt.text === firmTextN); });
-      document.getElementById('naame_remark').value = tr.children[5].textContent.trim() || '';
+      document.getElementById('naame_remark').value = tr.children[4].textContent.trim() || '';
       setUpdateMode('naame_add_btn','naame_cancel_btn');
       return;
     }

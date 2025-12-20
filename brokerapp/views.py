@@ -201,7 +201,7 @@ def save_sale(request):
         # dramt = (total_amt * dr / Decimal("100")).quantize(Decimal("0.01"))
         dr = to_decimal(request.POST.get("dr", 0))
         dramt = (to_decimal(request.POST.get("dramt", 0)) / Decimal("100")).quantize(Decimal("0.01"))
-
+        
         qi = to_decimal(request.POST.get("qi", 0))
         other = to_decimal(request.POST.get("other", 0))
         advance = to_decimal(request.POST.get("advance", 0))
@@ -1290,7 +1290,7 @@ def save_purchase(request):
             if invdate_str else date.today()
         )
         awakno = request.POST.get("awakno", "").strip()
-        extra = request.POST.get("extra", "").strip()
+        extra = request.POST.get("rst_no", "").strip()
         party_pk = request.POST.get("party")
         broker_pk = request.POST.get("broker")
         firm_pk = request.POST.get("firm")
@@ -1554,7 +1554,7 @@ def update_purchase(request, invno):
         party_pk = request.POST.get("party")
         broker_pk = request.POST.get("broker")
         vehicleno = request.POST.get("vehicleno", "").strip()
-        extra = request.POST.get("extra", "").strip()
+        extra = request.POST.get("rst_no", "").strip()
 
         # ---------- ITEMS ----------
         items_json = request.POST.get("items_json") or "[]"
@@ -2517,6 +2517,8 @@ def daily_page_view(request):
             'amount': e.amount,
             'remark': e.remark,
         }
+        # Add debug print
+        # print(f"DEBUG: Entry {e.entry_no}: BrokerObj={getattr(e, 'broker', 'NONE')}, BrokerName={broker_name}")
 
     jama_entries = []
     naame_entries = []
@@ -2826,23 +2828,24 @@ def daily_page_jama_update(request):
                 entry.amount = request.POST.get("amount")
             entry.remark = request.POST.get("remark", "") or ""
 
-            # party: if user supplied text, store into party_name and clear FK; if they selected FK (id), try to set FK
+            # party: use get_object_or_404 to ensure org consistency, similar to Add
             party_val = request.POST.get("party")
-            # if the select in your template sends a partyname string (not id), we treat it as text
-            # if you later change frontend to send party_id, adapt here.
             if party_val:
-                # if front-end sends the partyname string (as earlier), store it in party_name and clear FK:
-                entry.party_name = party_val
-                entry.party = None
-            # broker: treat as name string (same approach)
+                entry.party = get_object_or_404(HeadParty, pk=party_val, org=request.current_org)
+                # clear fallback name since we have a valid FK
+                entry.party_name = ""
+
+            # broker: use FK. Broker PK is brokername string.
             broker_val = request.POST.get("broker")
+            print(f"DEBUG: Update Jama Entry {entry_no}, broker_val='{broker_val}'")
             if broker_val:
+                brk = get_object_or_404(Broker, pk=broker_val, org=request.current_org)
+                entry.broker = brk
+                print(f"DEBUG: Set entry.broker to {brk}")
+            elif "broker" in request.POST and request.POST.get("broker") == "":
+                # allow clearing broker if explicitly sent as empty
                 entry.broker = None
-                # ensure text fallback (broker name field may be named differently in models — using broker_name if present)
-                if hasattr(entry, 'broker_name'):
-                    entry.broker_name = broker_val
-                elif hasattr(entry, 'brokername'):
-                    entry.brokername = broker_val
+                print("DEBUG: Cleared entry.broker")
 
             # firm: accept id or textual; try to treat as id first
             firm_val = request.POST.get("firm")
@@ -2857,16 +2860,24 @@ def daily_page_jama_update(request):
                     entry.firm_name = firm_val or entry.firm_name
 
             entry.save()
+            print("DEBUG: Jama Entry saved.")
     except Exception as exc:
+        print(f"DEBUG: Exception in jama_update: {exc}")
         return JsonResponse({"error": "exception saving entry: " + str(exc)}, status=500)
+
+    # Correctly resolve broker_name from the relationship or fallback
+    if entry.broker:
+        saved_broker_name = entry.broker.brokername
+    else:
+        saved_broker_name = getattr(entry, 'broker_name', '') or ""
 
     return JsonResponse({
         "success": True,
         "entry": {
             "entry_no": entry.entry_no,
             "amount": str(entry.amount),
-            "party_name": entry.party_name or "",
-            "broker_name": getattr(entry, 'broker_name', '') or "",
+            "party_name": entry.party_name or (entry.party.partyname if entry.party else ""),
+            "broker_name": saved_broker_name,
             "firm_name": entry.firm_name or "",
             "remark": entry.remark or "",
         }
@@ -2896,16 +2907,18 @@ def daily_page_naame_update(request):
 
             party_val = request.POST.get("party")
             if party_val:
-                entry.party_name = party_val
-                entry.party = None
+                entry.party = get_object_or_404(HeadParty, pk=party_val, org=request.current_org)
+                entry.party_name = ""
 
             broker_val = request.POST.get("broker")
+            print(f"DEBUG: Update Naame Entry {entry_no}, broker_val='{broker_val}'")
             if broker_val:
+                brk = get_object_or_404(Broker, pk=broker_val, org=request.current_org)
+                entry.broker = brk
+                print(f"DEBUG: Set entry.broker to {brk}")
+            elif "broker" in request.POST and request.POST.get("broker") == "":
                 entry.broker = None
-                if hasattr(entry, 'broker_name'):
-                    entry.broker_name = broker_val
-                elif hasattr(entry, 'brokername'):
-                    entry.brokername = broker_val
+                print("DEBUG: Cleared entry.broker")
 
             firm_val = request.POST.get("firm")
             if firm_val:
@@ -2918,16 +2931,23 @@ def daily_page_naame_update(request):
                     entry.firm_name = firm_val or entry.firm_name
 
             entry.save()
+            print("DEBUG: Naame Entry saved.")
     except Exception as exc:
+        print(f"DEBUG: Exception in naame_update: {exc}")
         return JsonResponse({"error": "exception saving entry: " + str(exc)}, status=500)
+
+    if entry.broker:
+        saved_broker_name = entry.broker.brokername
+    else:
+        saved_broker_name = getattr(entry, 'broker_name', '') or ""
 
     return JsonResponse({
         "success": True,
         "entry": {
             "entry_no": entry.entry_no,
             "amount": str(entry.amount),
-            "party_name": entry.party_name or "",
-            "broker_name": getattr(entry, 'broker_name', '') or "",
+            "party_name": entry.party_name or (entry.party.partyname if entry.party else ""),
+            "broker_name": saved_broker_name,
             "firm_name": entry.firm_name or "",
             "remark": entry.remark or "",
         }
@@ -3060,10 +3080,15 @@ def daily_page_pdf(request):
     pdf.cell(text_width, 8, diff_text, ln=1, align='R')
 
     # Output and return
-    pdf_bytes = pdf.output(dest='S').encode('latin1')
-    response = HttpResponse(pdf_bytes, content_type='application/pdf')
-    response['Content-Disposition'] = f'attachment; filename="DailyReport_{date}.pdf"'
-    return response
+    try:
+        # fpdf2 output() returns bytearray by default (no dest='S' needed)
+        pdf_bytes = pdf.output()
+        response = HttpResponse(bytes(pdf_bytes), content_type='application/pdf')
+        response['Content-Disposition'] = f'attachment; filename="DailyReport_{date}.pdf"'
+        return response
+    except Exception as e:
+        print(f"DEBUG: Error generating PDF: {e}")
+        return HttpResponse(f"Error generating PDF: {e}", status=500)
 
 
 
@@ -3669,7 +3694,8 @@ class BrokerStatementView(TemplateView):
     printable_template = "brokerapp/account/broker_statement_printable.html"
 
     def get(self, request, *args, **kwargs):
-        brokers = Broker.objects.order_by("brokername")
+        # Filter by current org
+        brokers = Broker.objects.filter(org=request.current_org).order_by("brokername")
         ctx = {
             "brokers": brokers,
             "selected": None,
@@ -3681,11 +3707,16 @@ class BrokerStatementView(TemplateView):
         return self.render_to_response(ctx)
 
     def post(self, request, *args, **kwargs):
+        print("DEBUG: BrokerStatementView POST called")
         action = request.POST.get("action")
         broker_id = request.POST.get("broker") or request.GET.get("broker")
-        brokers = Broker.objects.order_by("brokername")
+        print(f"DEBUG: action={action}, broker_id={broker_id}")
+
+        # Filter by current org
+        brokers = Broker.objects.filter(org=request.current_org).order_by("brokername")
 
         if not broker_id:
+            print("DEBUG: No broker_id provided")
             ctx = {
                 "brokers": brokers,
                 "selected": None,
@@ -3696,11 +3727,13 @@ class BrokerStatementView(TemplateView):
             }
             return self.render_to_response(ctx)
 
-        selected = get_object_or_404(Broker, pk=broker_id)
+        # Filter by current org
+        selected = get_object_or_404(Broker, pk=broker_id, org=request.current_org)
+        print(f"DEBUG: Selected broker: {selected}")
         entries, total_debit, total_credit, balance = self._build_entries(selected)
 
         ctx = {
-            "brokers": brokers,
+            "brokers": brokers, # list for dropdown
             "selected": selected,
             "entries": entries,
             "total_debit": total_debit,
@@ -3711,6 +3744,7 @@ class BrokerStatementView(TemplateView):
 
         # show statement in page
         if action in (None, "statement"):
+            print(f"DEBUG: Rendering statement with {len(entries)} entries")
             return self.render_to_response(ctx)
 
         # printable HTML
@@ -3834,8 +3868,9 @@ class BrokerStatementView(TemplateView):
 
         # helper to decide order_by field name for a model
         def _order_field(model_cls, preferred):
-            # return preferred if model has it, otherwise fallback to 'id'
-            return preferred if hasattr(model_cls, preferred) else 'id'
+            fields = {f.name for f in model_cls._meta.get_fields()}
+            return preferred if preferred in fields else 'id'            # return preferred if model has it, otherwise fallback to 'id'
+            #return preferred if hasattr(model_cls, preferred) else 'id'
 
         # 1) JamaEntry -> credit
         jama_order = _order_field(JamaEntry, 'created_at')
