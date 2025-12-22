@@ -115,11 +115,11 @@
                     <select name="firm" id="firm" class="form-control form-control-sm flex-grow-1">
                         <option value="">Select Firm</option>
                         {% for f in firms %}
-                        {% if sale and sale.firm and sale.firm.pk == f.pk %}
-                        <option value="{{ f.pk }}" selected>{{ f.firmname }}</option>
-                        {% else %}
-                        <option value="{{ f.pk }}">{{ f.firmname }}</option>
-                        {% endif %}
+                        <option value="{{ f.pk }}" {% if sale and sale.firm and sale.firm.pk == f.pk %}selected{% endif %}>
+    {{ f.firmname }}
+</option>
+
+
                         {% endfor %}
                     </select>
                 </div>
@@ -229,10 +229,15 @@
             <!-- FrkWt (new) -->
             <div class="col-md-auto" style="width:60px;">
                 <label class="form-label mb-1">FrkWt</label>
-                <input type="number" id="frkwt" name="frkwt" class="form-control form-control-sm text-end" step="any"
-                    value="{% if frkwt and frkwt|floatformat != '0.00' %}{{ frkwt }}{% endif %}"
-                    oninput="computeQtyAndAmountAndUpdateUI()">
-            </div>
+                <input type="number"
+                       id="frkwt"
+                       name="frkwt"
+           class="form-control form-control-sm text-end"
+           step="any"
+           value="{% if frkwt and frkwt|floatformat != '0.00' %}{{ frkwt }}{% endif %}"
+           oninput="computeQtyAndAmountAndUpdateUI()">
+</div>
+
 
 
             <!-- Qty -->
@@ -467,11 +472,9 @@
         setVal('batavamt', batavamt);
 
         // Dalali: interpret 'dr' as per-unit dalali and multiply by total quantity across items
-        let totalQty = 0;
-        itemsArray.forEach(it => { totalQty += Number(it.qty || 0); });
-        const drPerUnit = getFloat('dr'); // user-entered dalali per unit
-        const dramt = drPerUnit * totalQty;
-        setVal('dramt', dramt);
+       // dalali remains percentage-based
+        const dramt = totalamt * (getFloat('dr') / 100);
+        setVal('dramt', dramt); 
 
         // Final totals (include QI and Other as before)
         const total = totalamt - batavamt - dramt - getFloat('qi') - getFloat('other');
