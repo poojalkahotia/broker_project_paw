@@ -471,10 +471,10 @@
         const batavamt = totalamt * (getFloat('batavpercent') / 100);
         setVal('batavamt', batavamt);
 
-        // Dalali: interpret 'dr' as per-unit dalali and multiply by total quantity across items
-       // dalali remains percentage-based
-        const dramt = totalamt * (getFloat('dr') / 100);
-        setVal('dramt', dramt); 
+        // 3️⃣ Dalali (percentage-based, as per screenshot)
+    const drPercent = getFloat('dr');   // e.g. 10
+    const dramt = (totalamt * drPercent) / 100;
+    setVal('dramt', dramt.toFixed(2));
 
         // Final totals (include QI and Other as before)
         const total = totalamt - batavamt - dramt - getFloat('qi') - getFloat('other');
