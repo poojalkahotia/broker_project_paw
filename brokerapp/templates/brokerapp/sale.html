@@ -64,7 +64,7 @@
                     </label>
 
                     <select name="party" id="party" class="form-control form-control-sm flex-grow-1"
-                        onchange="fillPartyDetails()" required>
+                        required>
                         <option value="">Select Party</option>
                         {% for p in parties %}
                         {% if sale and sale.party.pk == p.pk %}
@@ -724,7 +724,7 @@
 
         // Also update summary when numeric fields that affect line amount change
         // (in case user types directly into party/mill/rate without leaving field)
-        ['partywt', 'millwt', 'frkwt', 'rate', 'bn', 'bnwt', 'bo', 'bowt', 'tbwt'].forEach(id => {
+        ['partywt', 'millwt', 'frkwt', 'rate', 'bn', 'bnwt', 'bo', 'bowt', 'tbwt', 'qty'].forEach(id => {
             const el = document.getElementById(id);
             if (el) {
                 el.addEventListener('input', function () {
