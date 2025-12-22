@@ -453,7 +453,7 @@
         // Only compute when there is a positive qty and a rate (prevents NaN)
         let amount = 0;
         if (qty > 0 && rate !== 0) {
-            amount = qty * rate * 0.01;
+            amount = qty * rate ;
         }
         setVal('lineAmount', amount);
 
@@ -472,9 +472,9 @@
         setVal('batavamt', batavamt);
 
         // 3️⃣ Dalali (percentage-based, as per screenshot)
-    const drPercent = getFloat('dr');   // e.g. 10
-    const dramt = (totalamt * drPercent) / 100;
-    setVal('dramt', dramt.toFixed(2));
+        const drPercent = getFloat('dr');   // e.g. 10
+        const dramt = (totalamt * drPercent) / 100;
+        setVal('dramt', dramt.toFixed(2));
 
         // Final totals (include QI and Other as before)
         const total = totalamt - batavamt - dramt - getFloat('qi') - getFloat('other');
