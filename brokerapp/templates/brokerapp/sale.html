@@ -464,27 +464,47 @@
     /* ===== Update Summary ===== */
     function updateSummary() {
         let totalamt = 0;
-        itemsArray.forEach(it => totalamt += Number(it.amt || 0));
+        let totalQty = 0;
+
+        // Collect totals
+        itemsArray.forEach(it => {
+            totalamt += Number(it.amt || 0);
+            totalQty += Number(it.qty || 0);
+        });
+
         setVal('totalamt', totalamt);
 
-        // Batav remains percentage-based
-        const batavamt = totalamt * (getFloat('batavpercent') / 100);
-        setVal('batavamt', batavamt);
+        /* === Batav (PERCENT ON AMOUNT) === */
+        const batavPercent = getFloat('batavpercent'); // e.g. 1.5%
+        const batavamt = (totalamt * batavPercent) / 100;
+        setVal('batavamt', batavamt.toFixed(2));
 
-        // 3️⃣ Dalali (percentage-based, as per screenshot)
-        const drPercent = getFloat('dr');   // e.g. 10
-        const dramt = (totalamt * drPercent) / 100;
+        /* === Dalali (PER UNIT ON WEIGHT) === */
+        const drPerUnit = getFloat('dr');  // e.g. 10 Rs per quintal
+        const dramt = drPerUnit * totalQty;
         setVal('dramt', dramt.toFixed(2));
 
-        // Final totals (include QI and Other as before)
-        const total = totalamt - batavamt - dramt - getFloat('qi') - getFloat('other');
-        setVal('total', total);
-        setVal('netamt', total - getFloat('advance'));
+        /* === QI & Other === */
+        const qiAmt = getFloat('qi');         // as money
+        const otherAmt = getFloat('other');   // as money
+        const advance = getFloat('advance');  // as money
 
-        // Update hidden JSON before submit
+        /* === FINAL TOTAL === */
+        const total = totalamt - batavamt - dramt - qiAmt - otherAmt;
+        setVal('total', total.toFixed(2));
+
+        /* === NET AMOUNT === */
+        // Final display conversion (÷100)
+        const displayTotal = total / 100;
+        setVal('total', displayTotal.toFixed(2));
+
+        const displayNet = (total - advance) / 100;
+        setVal('netamt', displayNet.toFixed(2));
+
+
+        /* === Update hidden JSON === */
         if (itemsJsonEl) itemsJsonEl.value = JSON.stringify(itemsArray);
     }
-
     /* ===== Update Items Table ===== */
     function updateUI() {
         const tbody = document.getElementById('addedItemsTableBody');
