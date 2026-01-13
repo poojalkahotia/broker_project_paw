@@ -139,7 +139,7 @@
             <!-- Extra -->
             <div class="col-md-3">
                 <div class="d-flex align-items-center mb-2">
-                    <label class="form-label me-2 mb-0" style="width: 80px;">Extra:</label>
+                    <label class="form-label me-2 mb-0" style="width: 80px;">RST No:</label>
                     <input type="text" name="extra" id="extra"
                            class="form-control form-control-sm flex-grow-1"
                            value="{{ purchase.extra|default:'' }}">
@@ -487,47 +487,48 @@ function computeQtyAndAmountAndUpdateUI(){
     if (qty > 0 && rate !== 0) {
         amount = qty * rate;
     }
-    setVal('lineAmount', amount);
+    setVal('lineAmount', amount/100);
 
     return { qty, amount };
 }
 
 /* ===== Update Summary ===== */
-function updateSummary(){
+function updateSummary() {
     let totalamt = 0;
-    itemsArray.forEach(it => totalamt += Number(it.amt||0));
-    setVal('totalamt', totalamt);
-
-    // Batav: % of total amount
-    const batavamt = totalamt * (getFloat('batavpercent') / 100);
-    setVal('batavamt', batavamt);
-
-    // Dalali per unit × total qty
     let totalQty = 0;
-    itemsArray.forEach(it => { totalQty += Number(it.qty || 0); });
 
-    const drPerUnit = getFloat('dr');
+    // Collect actual values
+    itemsArray.forEach(it => {
+        totalamt += Number(it.amt || 0);
+        totalQty += Number(it.qty || 0);
+    });
+
+    /* === Batav (PERCENT ON AMOUNT) === */
+    const batavPercent = getFloat('batavpercent'); 
+    const batavamt = (totalamt * batavPercent) / 100;
+
+    /* === Dalali (PER UNIT ON WEIGHT) === */
+    const drPerUnit = getFloat('dr');   // Rs per quintal
     const dramt = drPerUnit * totalQty;
-    setVal('dramt', dramt);
 
+    /* === QI & Other === */
+    const qiAmt = getFloat('qi_total');   // stored money
+    const otherAmt = getFloat('other');   // stored money
+    const advance = getFloat('advance');  // stored money
 
-    // QI amount is in #qi_total (name="qi")
-    const qiAmt = getFloat('qi_total');
-    const other = getFloat('other');
-    const advance = getFloat('advance');
+    /* === FINAL TOTAL (REAL ACTUAL) === */
+    const finalAmt = totalamt - batavamt - dramt - qiAmt - otherAmt;
 
-    // Final totals
-    // const total = totalamt - batavamt - dramt - qiAmt - getFloat('other');
-    // setVal('total', total);
-    // setVal('netamt', total - getFloat('advance'));
-    const rawTotal = (getFloat('totalamt') - batavamt - dramt - qiAmt - other);
-    const total = rawTotal / 100;
-    setVal('total', total);
-    setVal('netamt', total - advance);
+    /* === DISPLAY FORMAT (÷100) === */
+    setVal('totalamt', (totalamt / 100));
+    setVal('batavamt', (batavamt / 100));
+    setVal('dramt', (dramt / 100));
+    setVal('total', (finalAmt / 100));
 
+    const netAfterAdv = (finalAmt - advance);
+    setVal('netamt', (netAfterAdv / 100));
 
-    // Persist array to hidden JSON
-    if(itemsJsonEl) itemsJsonEl.value = JSON.stringify(itemsArray);
+    if (itemsJsonEl) itemsJsonEl.value = JSON.stringify(itemsArray);
 }
 
 /* ===== Update Items Table ===== */
@@ -552,7 +553,7 @@ function updateUI() {
             <td>${Number(it.qty).toFixed(2)}</td>
             <td>${Number(it.frkwt || 0).toFixed(2)}</td>
             <td>${Number(it.rate).toFixed(2)}</td>
-            <td class="text-end">${Number(it.amt).toFixed(2)}</td>
+            <td class="text-end">${(Number(it.amt) / 100).toFixed(2)}</td>
             <td>${Number(it.partywt).toFixed(2)}</td>
             <td>${Number(it.millwt).toFixed(2)}</td>
             <td>${Number(it.diffwt).toFixed(2)}</td>

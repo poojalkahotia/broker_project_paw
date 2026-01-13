@@ -463,48 +463,47 @@
 
     /* ===== Update Summary ===== */
     function updateSummary() {
-        let totalamt = 0;
-        let totalQty = 0;
+    let totalamt = 0;
+    let totalQty = 0;
 
-        // Collect totals
-        itemsArray.forEach(it => {
-            totalamt += Number(it.amt || 0);
-            totalQty += Number(it.qty || 0);
-        });
+    // Collect totals (actual values)
+    itemsArray.forEach(it => {
+        totalamt += Number(it.amt || 0);
+        totalQty += Number(it.qty || 0);
+    });
 
-        setVal('totalamt', totalamt);
+    /* === Batav (PERCENT ON AMOUNT) === */
+    const batavPercent = getFloat('batavpercent'); 
+    const batavamt = (totalamt * batavPercent) / 100;
 
-        /* === Batav (PERCENT ON AMOUNT) === */
-        const batavPercent = getFloat('batavpercent'); // e.g. 1.5%
-        const batavamt = (totalamt * batavPercent) / 100;
-        setVal('batavamt', batavamt.toFixed(2));
+    /* === Dalali (PER UNIT ON WEIGHT) === */
+    const drPerUnit = getFloat('dr');
+    const dramt = drPerUnit * totalQty;
 
-        /* === Dalali (PER UNIT ON WEIGHT) === */
-        const drPerUnit = getFloat('dr');  // e.g. 10 Rs per quintal
-        const dramt = drPerUnit * totalQty;
-        setVal('dramt', dramt.toFixed(2));
+    /* === QI & Other === */
+    const qiAmt = getFloat('qi'); 
+    const otherAmt = getFloat('other');
+    const advance = getFloat('advance');
 
-        /* === QI & Other === */
-        const qiAmt = getFloat('qi');         // as money
-        const otherAmt = getFloat('other');   // as money
-        const advance = getFloat('advance');  // as money
+    /* === FINAL TOTAL (actual calculation) === */
+    const finalAmt = totalamt - batavamt - dramt - qiAmt - otherAmt;
 
-        /* === FINAL TOTAL === */
-        const total = totalamt - batavamt - dramt - qiAmt - otherAmt;
-        setVal('total', total.toFixed(2));
+    /* === DISPLAY (÷100 FORMAT) === */
+    setVal('totalamt', totalamt / 100);
+    setVal('batavamt', batavamt / 100);
+    setVal('dramt', dramt / 100);
 
-        /* === NET AMOUNT === */
-        // Final display conversion (÷100)
-        const displayTotal = total / 100;
-        setVal('total', displayTotal.toFixed(2));
+    // total before advance
+    setVal('total', finalAmt / 100);
 
-        const displayNet = (total - advance) / 100;
-        setVal('netamt', displayNet.toFixed(2));
+    // net after advance
+    const netAfterAdv = (finalAmt - advance);
+    setVal('netamt', netAfterAdv / 100);
 
+    // update JSON
+    if (itemsJsonEl) itemsJsonEl.value = JSON.stringify(itemsArray);
+}
 
-        /* === Update hidden JSON === */
-        if (itemsJsonEl) itemsJsonEl.value = JSON.stringify(itemsArray);
-    }
     /* ===== Update Items Table ===== */
     function updateUI() {
         const tbody = document.getElementById('addedItemsTableBody');
@@ -526,7 +525,7 @@
             <td>${Number(it.qty).toFixed(2)}</td>
             <td>${Number(it.frkwt || 0).toFixed(2)}</td>
             <td>${Number(it.rate).toFixed(2)}</td>
-            <td class="text-end">${Number(it.amt).toFixed(2)}</td>
+            <td class="text-end">${Number(it.amt/100).toFixed(2)}</td>
             <td>${Number(it.partywt).toFixed(2)}</td>
             <td>${Number(it.millwt).toFixed(2)}</td>
             <td>${Number(it.diffwt).toFixed(2)}</td>
