@@ -195,18 +195,17 @@ def save_sale(request):
             total_amt += to_decimal(it.get("amt", 0))
 
         batavpercent = to_decimal(request.POST.get("batavpercent", 0))
-        batavamt = (total_amt * batavpercent / Decimal("100")).quantize(Decimal("0.01"))
+        batavamt = to_decimal(request.POST.get("batavamt", 0))
 
         # dr = to_decimal(request.POST.get("dr", 0))
         # dramt = (total_amt * dr / Decimal("100")).quantize(Decimal("0.01"))
         dr = to_decimal(request.POST.get("dr", 0))
-        dramt = (to_decimal(request.POST.get("dramt", 0)) / Decimal("100")).quantize(Decimal("0.01"))
-        
+        dramt = to_decimal(request.POST.get("dramt", 0))
         qi = to_decimal(request.POST.get("qi", 0))
         other = to_decimal(request.POST.get("other", 0))
         advance = to_decimal(request.POST.get("advance", 0))
-        total = (total_amt - batavamt - dramt - qi - other).quantize(Decimal("0.01"))
-        netamt = (total - advance).quantize(Decimal("0.01"))
+        total = to_decimal(request.POST.get("total", 0))
+        netamt = to_decimal(request.POST.get("netamt", 0))
 
         # Resolve FKs inside same org
         party = get_object_or_404(HeadParty, pk=party_pk, org=request.current_org)
@@ -455,18 +454,17 @@ def update_sale(request, invno):
             total_amt += to_decimal(it.get("amt", 0))
 
         batavpercent = to_decimal(request.POST.get("batavpercent", 0))
-        batavamt = (total_amt * batavpercent / Decimal('100')).quantize(Decimal("0.01"))
+        batavamt = to_decimal(request.POST.get("batavamt", 0))
 
         dr = to_decimal(request.POST.get("dr", 0))
-        dramt = (to_decimal(request.POST.get("dramt", 0)) / Decimal("100")).quantize(Decimal("0.01"))
-
+        dramt = to_decimal(request.POST.get("dramt", 0))
 
         qi = to_decimal(request.POST.get("qi", 0))
         other = to_decimal(request.POST.get("other", 0))
         advance = to_decimal(request.POST.get("advance", 0))
 
-        total = (total_amt - batavamt - dramt - qi - other).quantize(Decimal("0.01"))
-        netamt = (total - advance).quantize(Decimal("0.01"))
+        total = to_decimal(request.POST.get("total", 0))
+        netamt = to_decimal(request.POST.get("netamt", 0))
 
         # ---------- FOREIGN KEYS ----------
         party = get_object_or_404(HeadParty, pk=party_pk, org=request.current_org)
@@ -1309,17 +1307,17 @@ def save_purchase(request):
             total_amt += to_decimal(it.get("amt", 0))
 
         batavpercent = to_decimal(request.POST.get("batavpercent", 0))
-        batavamt = (total_amt * batavpercent / Decimal("100")).quantize(Decimal("0.01"))
+        batavamt = to_decimal(request.POST.get("batavamt", 0))
 
         dr = to_decimal(request.POST.get("dr", 0))
-        dramt = (total_amt * dr / Decimal("100")).quantize(Decimal("0.01"))
+        dramt = to_decimal(request.POST.get("dramt", 0))
 
         qi = to_decimal(request.POST.get("qi", 0))
         other = to_decimal(request.POST.get("other", 0))
         advance = to_decimal(request.POST.get("advance", 0))
 
-        total = (total_amt - batavamt - dramt - qi - other).quantize(Decimal("0.01"))
-        netamt = (total - advance).quantize(Decimal("0.01"))
+        total = to_decimal(request.POST.get("total", 0))
+        netamt = to_decimal(request.POST.get("netamt", 0))
 
         # -------- Resolve FKs within same org --------
         party = get_object_or_404(HeadParty, pk=party_pk, org=request.current_org)
@@ -1568,17 +1566,17 @@ def update_purchase(request, invno):
             total_amt += to_decimal(it.get("amt", 0))
 
         batavpercent = to_decimal(request.POST.get("batavpercent", 0))
-        batavamt = (total_amt * batavpercent / Decimal("100")).quantize(Decimal("0.01"))
+        batavamt = to_decimal(request.POST.get("batavamt", 0))
 
         dr = to_decimal(request.POST.get("dr", 0))
-        dramt = (total_amt * dr / Decimal("100")).quantize(Decimal("0.01"))
+        dramt = to_decimal(request.POST.get("dramt", 0))
 
         qi = to_decimal(request.POST.get("qi", 0))
         other = to_decimal(request.POST.get("other", 0))
         advance = to_decimal(request.POST.get("advance", 0))
 
-        total = (total_amt - batavamt - dramt - qi - other).quantize(Decimal("0.01"))
-        netamt = (total - advance).quantize(Decimal("0.01"))
+        total = to_decimal(request.POST.get("total", 0))
+        netamt = to_decimal(request.POST.get("netamt", 0))
 
         # ---------- FOREIGN KEYS ----------
         party = get_object_or_404(HeadParty, pk=party_pk, org=request.current_org)
