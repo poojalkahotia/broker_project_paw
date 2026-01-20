@@ -1286,6 +1286,7 @@ def save_purchase(request):
 
     try:
         # -------- Header fields --------
+        invno = request.POST.get("invno", "").strip()
         invdate_str = request.POST.get("invdate")
         invdate = (
             datetime.strptime(invdate_str, "%Y-%m-%d").date()
@@ -1339,6 +1340,7 @@ def save_purchase(request):
         purchase = PurchaseMaster.objects.create(
             org=request.current_org,
             created_by=request.user,
+            invno=invno,
             invdate=invdate,
             awakno=awakno,
             party=party,
@@ -1547,6 +1549,7 @@ def update_purchase(request, invno):
 
     try:
         # ---------- HEADER ----------
+        invno = request.POST.get("invno", "").strip()
         invdate_str = request.POST.get("invdate")
         invdate = (
             datetime.strptime(invdate_str, "%Y-%m-%d").date()
@@ -1596,6 +1599,7 @@ def update_purchase(request, invno):
                 firm = get_object_or_404(Firm, pk=firm_pk)
 
         # ---------- UPDATE HEADER ----------
+        purchase.invno = invno
         purchase.invdate = invdate
         purchase.awakno = awakno
         purchase.party = party
