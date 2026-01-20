@@ -171,6 +171,7 @@ def save_sale(request):
         return redirect("sale_form_new")
 
     try:
+        invno = request.POST.get("invno")
         invdate_str = request.POST.get("invdate")
         invdate = datetime.strptime(invdate_str, "%Y-%m-%d").date() if invdate_str else date.today()
         awakno = request.POST.get("awakno", "").strip()
@@ -222,6 +223,7 @@ def save_sale(request):
 
         # Create SaleMaster
         sale = SaleMaster.objects.create(
+            invno=invno,
             org=request.current_org,
             created_by=request.user,
             invdate=invdate,
@@ -433,6 +435,7 @@ def update_sale(request, invno):
 
     try:
         # ---------- HEADER FIELDS ----------
+        invno = request.POST.get("invno")
         invdate_str = request.POST.get("invdate")
         invdate = datetime.strptime(invdate_str, "%Y-%m-%d").date() if invdate_str else sale.invdate
         awakno = request.POST.get("awakno", "").strip()
@@ -480,6 +483,7 @@ def update_sale(request, invno):
                 firm = get_object_or_404(Firm, pk=firm_pk)
 
         # ---------- UPDATE HEADER ----------
+        sale.invno = invno
         sale.invdate = invdate
         sale.awakno = awakno
         sale.party = party
