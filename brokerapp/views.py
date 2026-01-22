@@ -3628,22 +3628,19 @@ class PartyStatementView(TemplateView):
                 name = getattr(firm_obj, "firmname", str(firm_obj))
             return name or ""
         
-        if getattr(head, "openingdebit", None) and head.openingdebit != Decimal("0"):
-            entries.append({"entry_no": "OPEN", 
-                            "date": None,
-                            "debit": head.openingdebit,
-                            "credit": Decimal("0"),
-                            "remark": "Opening (Dr)",
-                            "firm_name": "",
-                        })
-        elif getattr(head, "openingcredit", None) and head.openingcredit != Decimal("0"):
-            entries.append({"entry_no": "OPEN", 
-                            "date": None,
-                            "debit": Decimal("0"), 
-                            "credit": head.openingcredit,
-                            "remark": "Opening (Cr)",
-                            "firm_name": "",
-                        })
+        # 0) Opening Balance
+        opening_dr = Decimal(str(getattr(head, "openingdebit", 0) or 0))
+        opening_cr = Decimal(str(getattr(head, "openingcredit", 0) or 0))
+
+        if opening_dr or opening_cr:
+            entries.append({
+                "entry_no": "OPEN", 
+                "date": None,
+                "debit": opening_dr,
+                "credit": opening_cr,
+                "remark": "Opening Balance",
+                "firm_name": "",
+            })
 
         for s in SaleMaster.objects.filter(party=head).order_by("invdate"):
             entries.append({"entry_no": s.invno, 
@@ -3678,7 +3675,13 @@ class PartyStatementView(TemplateView):
                             "firm_name": firm_label_from(j),
                         })
         # sort + totals + running balance
-        entries = sorted(entries, key=lambda x: (x["date"] is None, x["date"] or ""))
+        # sort entries: "OPEN" first, then by date
+        from datetime import datetime
+        entries = sorted(entries, key=lambda x: (
+            0 if x.get("entry_no") == "OPEN" else 1,
+            x["date"] or datetime.max.date(), 
+            str(x.get("entry_no", ""))
+        ))
         total_debit = sum(e["debit"] for e in entries)
         total_credit = sum(e["credit"] for e in entries)
         bal = Decimal("0")
@@ -3878,6 +3881,19 @@ class BrokerStatementView(TemplateView):
             return preferred if preferred in fields else 'id'            # return preferred if model has it, otherwise fallback to 'id'
             #return preferred if hasattr(model_cls, preferred) else 'id'
 
+        # 0) Opening Balance
+        opening_dr = Decimal(str(getattr(selected, "openingdebit", 0) or 0))
+        opening_cr = Decimal(str(getattr(selected, "openingcredit", 0) or 0))
+
+        if opening_dr or opening_cr:
+            entries.append({
+                "entry_no": "OPEN",
+                "date": None,  # opening balance has no date
+                "debit": opening_dr,
+                "credit": opening_cr,
+                "remark": "Opening Balance",
+            })
+
         # 1) JamaEntry -> credit
         jama_order = _order_field(JamaEntry, 'created_at')
         jama_qs = JamaEntry.objects.filter(broker=selected).order_by(jama_order)
@@ -3911,7 +3927,7 @@ class BrokerStatementView(TemplateView):
         sale_qs = SaleMaster.objects.filter(broker=selected).order_by(sale_order)
         for s in sale_qs:
             date_val = getattr(s, "invdate", None)
-            amt = Decimal(str(getattr(s, "dramt", 0) or 0))
+            amt = Decimal(str(getattr(s, "netamt", 0) or 0))
             entries.append({
                 "entry_no": f"S-{getattr(s, 'invno', '')}",
                 "date": date_val,
@@ -3925,7 +3941,7 @@ class BrokerStatementView(TemplateView):
         purchase_qs = PurchaseMaster.objects.filter(broker=selected).order_by(purchase_order)
         for p in purchase_qs:
             date_val = getattr(p, "invdate", None)
-            amt = Decimal(str(getattr(p, "dramt", 0) or 0))
+            amt = Decimal(str(getattr(p, "netamt", 0) or 0))
             entries.append({
                 "entry_no": f"P-{getattr(p, 'invno', '')}",
                 "date": date_val,
@@ -3934,17 +3950,21 @@ class BrokerStatementView(TemplateView):
                 "remark": (getattr(p, "remark", "") or "") + " (Purchase)",
             })
 
-        # sort entries by date (None considered after real dates), then entry_no
-        # Use a stable key: (is_date_none, date_or_max, entry_no)
+        # sort entries: "OPEN" first, then by date (None treated as last if mostly non-OPEN? actually we put OPEN first explicitly)
         from datetime import datetime
-        entries.sort(key=lambda x: (x["date"] is None, x["date"] or datetime.max.date(), x.get("entry_no", "")))
+        # Key: (0 if OPEN else 1, date_or_max, entry_str)
+        entries.sort(key=lambda x: (
+            0 if x.get("entry_no") == "OPEN" else 1,
+            x["date"] or datetime.max.date(), 
+            str(x.get("entry_no", ""))
+        ))
 
         # totals + running balance (Decimal)
         total_debit = sum(e["debit"] for e in entries) if entries else Decimal("0")
         total_credit = sum(e["credit"] for e in entries) if entries else Decimal("0")
         bal = Decimal("0")
         for e in entries:
-            bal += (e["debit"] - e["credit"])
+            bal += (e["credit"] - e["debit"])
             e["balance"] = bal
 
         balance = bal

@@ -119,7 +119,7 @@
                 {% for j in jama_entries %}
                 <tr data-entry="{{ j.entry_no }}">
 
-                  <td class="amount-col text-end">{{ j.amount|floatformat:0 }}</td>
+                  <td class="amount-col text-end">{{ j.amount|floatformat:2 }}</td>
 
                   <td>
                     {% if j.party %}
@@ -266,7 +266,7 @@
                 {% for n in naame_entries %}
                 <tr data-entry="{{ n.entry_no }}">
 
-                  <td class="amount-col text-end">{{ n.amount|floatformat:0 }}</td>
+                  <td class="amount-col text-end">{{ n.amount|floatformat:2 }}</td>
 
                   <td>
                     {% if n.party %}
@@ -438,7 +438,12 @@
             // reset form / UI to Add mode
             document.getElementById('jama_edit_entry').value = '';
             setAddMode('jama_add_btn', 'jama_cancel_btn');
-            document.getElementById('jama_amount').value = ''; document.getElementById('jama_remark').value = ''; document.getElementById('jama_firm').value = '';
+            document.getElementById('jama_amount').value = ''; 
+            
+            document.getElementById('jama_remark').value = ''; 
+            document.getElementById('jama_firm').value = '';
+            document.getElementById('jama_broker').value = '';
+            document.getElementById('jama_party').value = '';
             updateTotals();
           })
           .catch(err => {
@@ -470,7 +475,11 @@
               '<button class="btn btn-sm btn-danger jama-remove-btn" data-entry="' + e.entry_no + '" title="Delete">' + ICON_TRASH + '</button>' +
               '</td>';
             t.appendChild(tr); updateTotals();
-            document.getElementById('jama_amount').value = ''; document.getElementById('jama_remark').value = ''; document.getElementById('jama_firm').value = '';
+            document.getElementById('jama_amount').value = ''; 
+            document.getElementById('jama_remark').value = ''; 
+            document.getElementById('jama_firm').value = '';
+            document.getElementById('jama_party').value = '';
+            document.getElementById('jama_broker').value = '';
           }).catch(() => alert('Failed to add Jama'));
       }
     });
@@ -520,7 +529,11 @@
             // reset to Add mode
             document.getElementById('naame_edit_entry').value = '';
             setAddMode('naame_add_btn', 'naame_cancel_btn');
-            document.getElementById('naame_amount').value = ''; document.getElementById('naame_remark').value = ''; document.getElementById('naame_firm').value = '';
+            document.getElementById('naame_amount').value = '';
+           document.getElementById('naame_remark').value = '';
+            document.getElementById('naame_firm').value = '';
+            document.getElementById('naame_broker').value = '';
+            document.getElementById('naame_party').value = '';
             updateTotals();
           })
           .catch(err => {
@@ -552,7 +565,11 @@
               '<button class="btn btn-sm btn-danger naame-remove-btn" data-entry="' + e.entry_no + '" title="Delete">' + ICON_TRASH + '</button>' +
               '</td>';
             t.appendChild(tr); updateTotals();
-            document.getElementById('naame_amount').value = ''; document.getElementById('naame_remark').value = ''; document.getElementById('naame_firm').value = '';
+            document.getElementById('naame_amount').value = ''; 
+            document.getElementById('naame_remark').value = ''; 
+            document.getElementById('naame_firm').value = '';
+            document.getElementById('naame_party').value = '';
+            document.getElementById('naame_broker').value = '';
           }).catch(() => alert('Failed to add Naame'));
       }
     });
