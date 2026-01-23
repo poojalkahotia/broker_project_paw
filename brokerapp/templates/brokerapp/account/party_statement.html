@@ -57,11 +57,11 @@
               {% for e in entries %}
                 <tr>
                   <td class="align-middle text-center">
-                    {% if e.entryno and e.entryno != 'OPEN' %}{{ e.entryno }}{% endif %}
+                    {% if e.entry_no and e.entry_no != 'OPEN' %}{{ e.entry_no }}{% endif %}
                   </td>
 
                   <td class="align-middle text-center">
-                    {% if e.invdate %}{{ e.invdate|date:'d-m-y' }}{% endif %}
+                    {% if e.date %}{{ e.date|date:'d-m-y' }}{% endif %}
                   </td>
 
                   <td class="align-middle text-end">
