@@ -3898,7 +3898,7 @@ class BrokerStatementView(TemplateView):
         jama_order = _order_field(JamaEntry, 'created_at')
         jama_qs = JamaEntry.objects.filter(broker=selected).order_by(jama_order)
         for j in jama_qs:
-            date_val = j.created_at.date() if getattr(j, 'created_at', None) else None
+            date_val = j.daily_page.date if getattr(j, 'daily_page', None) else None
             amt = Decimal(str(j.amount or 0))
             entries.append({
                 "entry_no": f"J-{j.entry_no}",
@@ -3912,7 +3912,7 @@ class BrokerStatementView(TemplateView):
         naame_order = _order_field(NaameEntry, 'created_at')
         naame_qs = NaameEntry.objects.filter(broker=selected).order_by(naame_order)
         for n in naame_qs:
-            date_val = n.created_at.date() if getattr(n, 'created_at', None) else None
+            date_val = n.daily_page.date if getattr(n, 'daily_page', None) else None
             amt = Decimal(str(n.amount or 0))
             entries.append({
                 "entry_no": f"N-{n.entry_no}",
