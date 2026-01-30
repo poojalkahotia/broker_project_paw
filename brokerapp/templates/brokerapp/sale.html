@@ -455,7 +455,7 @@
         if (qty > 0 && rate !== 0) {
             amount = qty * rate ;
         }
-        setVal('lineAmount', amount);
+        setVal('lineAmount', amount/100);
 
         return { qty, amount };
     }
@@ -478,20 +478,22 @@
 
     /* === Dalali (PER UNIT ON WEIGHT) === */
     const drPerUnit = getFloat('dr');
-    const dramt = drPerUnit * totalQty;
+    const dalaliQuintal = totalQty / 100;
+    const dramt = drPerUnit * dalaliQuintal * 100; // paise
+
 
     /* === QI & Other === */
-    const qiAmt = getFloat('qi'); 
+    const qiAmt = getFloat('qi_total'); 
     const otherAmt = getFloat('other');
     const advance = getFloat('advance');
 
     /* === FINAL TOTAL (actual calculation) === */
-    const finalAmt = totalamt - batavamt - dramt - qiAmt - otherAmt;
+    const finalAmt = totalamt - batavamt - dramt - (qiAmt * 100) - otherAmt;
 
     /* === DISPLAY (÷100 FORMAT) === */
     setVal('totalamt', totalamt / 100);
     setVal('batavamt', batavamt / 100);
-    setVal('dramt', dramt / 100);
+    setVal('dramt', drPerUnit * dalaliQuintal); // ₹
 
     // total before advance
     setVal('total', finalAmt / 100);
@@ -765,8 +767,8 @@
             if (!qiPerInput || !qiTotalInput || !itemsBody) return;
             const perLot = parseFloat(qiPerInput.value) || 0;
             const lotCount = itemsBody.querySelectorAll('tr').length;
-            const total = perLot * lotCount;
-            qiTotalInput.value = total.toFixed(2);
+            const qiTotal = perLot * lotCount;
+            qiTotalInput.value = qiTotal.toFixed(2);
             updateSummary();
         }
 

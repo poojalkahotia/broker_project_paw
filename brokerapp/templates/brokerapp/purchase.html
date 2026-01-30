@@ -516,8 +516,10 @@ function updateSummary() {
     const otherAmt = getFloat('other');   // stored money
     const advance = getFloat('advance');  // stored money
 
+
+
     /* === FINAL TOTAL (REAL ACTUAL) === */
-    const finalAmt = totalamt - batavamt - dramt - qiAmt - otherAmt;
+    const finalAmt = totalamt - batavamt - dramt - (qiAmt * 100) - otherAmt;
 
     /* === DISPLAY FORMAT (÷100) === */
     setVal('totalamt', (totalamt / 100));
@@ -781,8 +783,8 @@ document.addEventListener('DOMContentLoaded', function(){
         if(!qiPerInput || !qiTotalInput || !itemsBody) return;
         const perLot = parseFloat(qiPerInput.value) || 0;
         const lotCount = itemsBody.querySelectorAll('tr').length;
-        const total = perLot * lotCount;
-        qiTotalInput.value = total.toFixed(2);
+        const qiTotal = perLot * lotCount;
+        qiTotalInput.value = qiTotal.toFixed(2);
         updateSummary();
     }
 
