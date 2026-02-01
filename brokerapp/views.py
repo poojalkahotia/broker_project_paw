@@ -261,7 +261,7 @@ def save_sale(request):
                 tbwt=to_decimal(it.get("tbwt", 0)),
                 qty=to_decimal(it.get("qty", 0)),
                 rate=to_decimal(it.get("rate", 0)),
-                amount=to_decimal(it.get("amt", 0)),
+                
                 partywt=to_decimal(it.get("partywt", 0)),
                 millwt=to_decimal(it.get("millwt", 0)),
                 frkwt=to_decimal(it.get("frkwt", 0)),
@@ -520,7 +520,7 @@ def update_sale(request, invno):
                 tbwt=to_decimal(it.get("tbwt", 0)),
                 qty=to_decimal(it.get("qty", 0)),
                 rate=to_decimal(it.get("rate", 0)),
-                amount=to_decimal(it.get("amt", 0)),
+               
                 partywt=to_decimal(it.get("partywt", 0)),
                 millwt=to_decimal(it.get("millwt", 0)),
                 frkwt=to_decimal(it.get("frkwt", 0)),
@@ -1067,58 +1067,45 @@ def sale_report_pdf(request):
 
 def sale_search_view(request):
     """
-    SaleDetails search tailored to your models.
+    SaleDetails search (UPDATED as per new UI).
+
     GET params supported:
-      - frkwt (exact)
-      - frkwt_min, frkwt_max (optional range)
       - lotno
-      - partyname (matches SaleMaster.party.partyname)
-      - invno (matches SaleMaster.invno)
-    Orders by SaleMaster.invdate desc. Limits to 500 results.
+      - partyname   (SaleMaster.party.partyname)
+      - invno       (SaleMaster.invno)
+
+    Results show:
+      Lot No, Party Name, Broker, Firm, Invoice No
+
+    Ordered by SaleMaster.invdate desc.
+    Limited to 500 records.
     """
-    qs = SaleDetails.objects.select_related('salemaster', 'salemaster__party').all()
 
-    # numeric filters for FrkWt
-    frkwt = request.GET.get('frkwt')
-    frkwt_min = request.GET.get('frkwt_min')
-    frkwt_max = request.GET.get('frkwt_max')
+    qs = SaleDetails.objects.select_related(
+        'salemaster',
+        'salemaster__party',
+        'salemaster__broker',
+        'salemaster__firm'
+    )
 
-    if frkwt:
-        try:
-            # cast to float/Decimal compare (Django will handle string numbers too)
-            qs = qs.filter(frkwt__exact=frkwt)
-        except (ValueError, TypeError):
-            pass
-    else:
-        if frkwt_min:
-            try:
-                qs = qs.filter(frkwt__gte=frkwt_min)
-            except (ValueError, TypeError):
-                pass
-        if frkwt_max:
-            try:
-                qs = qs.filter(frkwt__lte=frkwt_max)
-            except (ValueError, TypeError):
-                pass
+   
 
-    # string-based filters
-    lotno = request.GET.get('lotno')
-    if lotno:
-        qs = qs.filter(lotno__icontains=lotno)
-
+    # Party Name filter (MAIN SEARCH)
     partyname = request.GET.get('partyname')
     if partyname:
-        # your HeadParty field is "partyname"
-        qs = qs.filter(salemaster__party__partyname__icontains=partyname)
+        qs = qs.filter(
+            salemaster__party__partyname__icontains=partyname
+        )
 
-    invno = request.GET.get('invno')
-    if invno:
-        qs = qs.filter(salemaster__invno__icontains=invno)
-
-    # final ordering and limit
+    
+    # Final ordering & limit
     sales = qs.order_by('-salemaster__invdate')[:500]
 
-    return render(request, 'brokerapp/sale_search.html', {'sales': sales})
+    return render(
+        request,
+        'brokerapp/sale_search.html',
+        {'sales': sales}
+    )
 
 
 def bardana_report(request):
@@ -1377,7 +1364,7 @@ def save_purchase(request):
                 tbwt=to_decimal(it.get("tbwt", 0)),      # TBWt field in model
                 qty=to_decimal(it.get("qty", 0)),
                 rate=to_decimal(it.get("rate", 0)),
-                amount=to_decimal(it.get("amt", 0)),
+                
                 partywt=to_decimal(it.get("partywt", 0)),
                 millwt=to_decimal(it.get("millwt", 0)),
                 frkwt=to_decimal(it.get("frkwt", 0)),    # FrkWt field in model
@@ -1638,7 +1625,7 @@ def update_purchase(request, invno):
                 tbwt=to_decimal(it.get("tbwt", 0)),
                 qty=to_decimal(it.get("qty", 0)),
                 rate=to_decimal(it.get("rate", 0)),
-                amount=to_decimal(it.get("amt", 0)),
+                
                 partywt=to_decimal(it.get("partywt", 0)),
                 millwt=to_decimal(it.get("millwt", 0)),
                 frkwt=to_decimal(it.get("frkwt", 0)),

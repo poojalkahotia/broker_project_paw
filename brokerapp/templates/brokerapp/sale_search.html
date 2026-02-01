@@ -5,23 +5,23 @@
 <div class="container-fluid my-3 pt-4"><!-- pt-4 avoids navbar overlap -->
   <div class="card shadow-sm mx-auto" style="max-width:1100px;">
     <div class="card-header text-white d-flex justify-content-between align-items-center" style="background:#0b3d91;">
-      <h5 class="mb-0">Sale — LotNo / FrkWt Search</h5>
+      <h5 class="mb-0">Sale — Party / Lot Search</h5>
     </div>
 
     <div class="card-body">
       <!-- FORM -->
       <form id="sale-search-form" method="get" action="{% url 'sale_search' %}">
-        <!-- Row 1: FrkWt + Search -->
+
+        <!-- Row 1: Party Name + Search -->
         <div class="row g-2 align-items-end">
-          <div class="col-auto" style="min-width: 140px;">
-            <label for="frkwt" class="form-label mb-1">FrkWt</label>
-            <input type="number" name="frkwt" id="frkwt"
-                   class="form-control form-control-sm text-end"
-                   step="any" inputmode="decimal"
-                   {% if request.GET.frkwt and request.GET.frkwt != '0' %}
-                     value="{{ request.GET.frkwt }}"
-                   {% endif %}
-                   placeholder="">
+          <div class="col-auto" style="min-width:220px;">
+            <label for="partyname" class="form-label mb-1">Party Name</label>
+            <input type="text"
+                   name="partyname"
+                   id="partyname"
+                   class="form-control form-control-sm"
+                   value="{{ request.GET.partyname|default_if_none:'' }}"
+                   placeholder="Enter Party Name">
           </div>
 
           <div class="col-auto">
@@ -30,44 +30,11 @@
               <i class="bi bi-search"></i> Search
             </button>
           </div>
+
           <div class="col"></div>
         </div>
 
-        <hr class="my-3">
-
-        <!-- Row 2: LotNo, Frk, PartyName, InvNo -->
-        <div class="row g-2">
-          <div class="col-md-3">
-            <label for="lotno" class="form-label mb-1">LotNo</label>
-            <input type="text" name="lotno" id="lotno" class="form-control form-control-sm"
-                   value="{{ request.GET.lotno|default_if_none:'' }}" placeholder="Enter LotNo">
-          </div>
-
-          <div class="col-md-2">
-            <label for="frk" class="form-label mb-1">Frk</label>
-            <input type="text" name="frk" id="frk" class="form-control form-control-sm"
-                   value="{{ request.GET.frk|default_if_none:'' }}" placeholder="Frk">
-          </div>
-
-          <div class="col-md-4">
-            <label for="partyname" class="form-label mb-1">Party Name</label>
-            <input type="text" name="partyname" id="partyname" class="form-control form-control-sm"
-                   value="{{ request.GET.partyname|default_if_none:'' }}" placeholder="Party name">
-          </div>
-
-          <div class="col-md-2">
-            <label for="invno" class="form-label mb-1">Inv No.</label>
-            <input type="text" name="invno" id="invno" class="form-control form-control-sm"
-                   value="{{ request.GET.invno|default_if_none:'' }}" placeholder="Invoice #">
-          </div>
-
-          <div class="col-md-1 d-flex align-items-end">
-            <button type="submit" name="show" value="1"
-                    class="btn btn-sm w-100" style="background:#0b3d91; color:#fff;">
-              Show
-            </button>
-          </div>
-        </div>
+        
       </form>
 
       <!-- Results -->
@@ -77,13 +44,11 @@
           <table class="table table-sm table-hover align-middle">
             <thead class="table-light">
               <tr>
-                <th>LotNo</th>
-                <th class="text-end">FrkWt</th>
-                
-                <th>Party</th>
+                <th>Lot No</th>
+                <th>Party Name</th>
+                <th>Broker</th>
+                <th>Firm</th>
                 <th>Inv No</th>
-                <th>Date</th>
-                <th>Action</th>
               </tr>
             </thead>
 
@@ -91,22 +56,17 @@
               {% for s in sales %}
               <tr>
                 <td>{{ s.lotno }}</td>
-                <td class="text-end">{{ s.frkwt }}</td>
-                
-                <!-- use partyname (your model uses partyname) -->
                 <td>{{ s.salemaster.party.partyname }}</td>
+                <td>{{ s.salemaster.broker.brokername }}</td>
+                <td>{{ s.salemaster.firm.firmname }}</td>
                 <td>{{ s.salemaster.invno }}</td>
-                <td>{{ s.salemaster.invdate|date:"M. d, Y" }}</td>
-                <td>
-                  <a href="{% url 'saledata' %}" class="btn btn-sm btn-outline-primary">Open</a>
-                </td>
               </tr>
               {% endfor %}
             </tbody>
           </table>
         </div>
         {% else %}
-          <p class="text-muted mb-0">No results — try searching by LotNo or FrkWt.</p>
+          <p class="text-muted mb-0">No results — try searching by Party, Lot No or Invoice.</p>
         {% endif %}
       </div>
     </div>
@@ -115,21 +75,10 @@
 
 <!-- JS -->
 <script>
-  // Hide "0" in FrkWt
-  (function(){
-    const frkInput = document.getElementById('frkwt');
-    if (!frkInput) return;
-    frkInput.addEventListener('input', () => {
-      if (frkInput.value === '0') frkInput.value = '';
-    });
-
-    // Focus LotNo by default
-    const lot = document.getElementById('lotno');
-    if (lot) lot.focus();
-  })();
-
-  // NOTE: If you want AJAX search, create a partial view that returns only the table fragment.
-  // Currently the form submits normally (GET) and reloads the page — which is simpler & avoids nesting.
+(function () {
+  const party = document.getElementById('partyname');
+  if (party) party.focus();
+})();
 </script>
 
 {% endblock %}

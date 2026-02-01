@@ -352,7 +352,7 @@
                         value="0.00">
 
                     <input type="number" step="any" id="qi_total" name="qi" class="form-control text-end w-25" readonly
-                        value="0.00">
+                        value="{{ sale.qi|default:'0.00' }}">
                 </div>
 
 
@@ -453,9 +453,9 @@
         // Only compute when there is a positive qty and a rate (prevents NaN)
         let amount = 0;
         if (qty > 0 && rate !== 0) {
-            amount = qty * rate ;
+            amount = (qty * rate) / 100;
         }
-        setVal('lineAmount', amount/100);
+        setVal('lineAmount', amount);
 
         return { qty, amount };
     }
@@ -479,8 +479,7 @@
     /* === Dalali (PER UNIT ON WEIGHT) === */
     const drPerUnit = getFloat('dr');
     const dalaliQuintal = totalQty / 100;
-    const dramt = drPerUnit * dalaliQuintal * 100; // paise
-
+    const dramt = drPerUnit * dalaliQuintal; // paise
 
     /* === QI & Other === */
     const qiAmt = getFloat('qi_total'); 
@@ -488,19 +487,18 @@
     const advance = getFloat('advance');
 
     /* === FINAL TOTAL (actual calculation) === */
-    const finalAmt = totalamt - batavamt - dramt - (qiAmt * 100) - otherAmt;
+    const finalAmt = totalamt - batavamt - dramt - qiAmt - otherAmt;
 
     /* === DISPLAY (÷100 FORMAT) === */
-    setVal('totalamt', totalamt / 100);
-    setVal('batavamt', batavamt / 100);
+    setVal('totalamt', totalamt);
+    setVal('batavamt', batavamt);
     setVal('dramt', drPerUnit * dalaliQuintal); // ₹
 
     // total before advance
-    setVal('total', finalAmt / 100);
-
+    setVal('total', finalAmt);
     // net after advance
     const netAfterAdv = (finalAmt - advance);
-    setVal('netamt', netAfterAdv / 100);
+    setVal('netamt', netAfterAdv);
 
     // update JSON
     if (itemsJsonEl) itemsJsonEl.value = JSON.stringify(itemsArray);
@@ -527,7 +525,7 @@
             <td>${Number(it.qty).toFixed(2)}</td>
             <td>${Number(it.frkwt || 0).toFixed(2)}</td>
             <td>${Number(it.rate).toFixed(2)}</td>
-            <td class="text-end">${Number(it.amt/100).toFixed(2)}</td>
+            <td class="text-end">${Number(it.amt).toFixed(2)}</td>
             <td>${Number(it.partywt).toFixed(2)}</td>
             <td>${Number(it.millwt).toFixed(2)}</td>
             <td>${Number(it.diffwt).toFixed(2)}</td>
@@ -674,7 +672,21 @@
 
     /* ===== DOMContentLoaded ===== */
     document.addEventListener('DOMContentLoaded', function () {
+
         if (itemsArray.length) updateUI();
+
+        // define ONLY once
+        const itemsBody = document.getElementById('addedItemsTableBody');
+        const qiPer = document.getElementById('qi_per');
+        const qiTotal = document.getElementById('qi_total');
+
+        // 🔁 RESTORE QI on UPDATE
+        if (qiTotal && qiPer && itemsBody) {
+            const lotCount = itemsBody.querySelectorAll('tr').length || 1;
+            const totalQi = parseFloat(qiTotal.value) || 0;
+            qiPer.value = (totalQi / lotCount).toFixed(2);
+        }
+
         computeQtyAndAmountAndUpdateUI();
         updateSummary();
 
@@ -761,7 +773,7 @@
         /* ===== QI Auto Calculation ===== */
         const qiPerInput = document.getElementById('qi_per');
         const qiTotalInput = document.getElementById('qi_total');
-        const itemsBody = document.getElementById('addedItemsTableBody');
+
 
         function updateQI() {
             if (!qiPerInput || !qiTotalInput || !itemsBody) return;
@@ -776,12 +788,20 @@
             qiPerInput.addEventListener('input', updateQI);
         }
 
-        const qiObserver = new MutationObserver(updateQI);
+        const qiObserver = new MutationObserver(() => {
+        // ✅ Edit mode me QI ko auto-reset mat karo
+        // sirf tab auto-calc jab user qi_per me type kare
+            if (document.activeElement === qiPerInput) {
+                updateQI();
+            }
+        });
+
         if (itemsBody) {
             qiObserver.observe(itemsBody, { childList: true });
         }
 
-        updateQI();
+
+        //updateQI();
 
 
     });

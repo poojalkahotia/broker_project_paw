@@ -385,7 +385,7 @@
                            value="0.00">
                     <input type="number" step="any" id="qi_total" name="qi"
                            class="form-control text-end w-25"
-                           readonly value="{{ purchase.qi|default_if_none:'0.00' }}">
+                           readonly value="{{ purchase.qi|default:'0.00' }}">
                 </div>
 
                 <!-- Other -->
@@ -433,35 +433,35 @@
 
 <script>
 /* ===== Helper functions ===== */
-function getFloat(id){ 
-    const el = document.getElementById(id); 
-    if(!el) return 0; 
-    const v = parseFloat(el.value); 
-    return isNaN(v) ? 0 : v; 
+function getFloat(id){
+    const el = document.getElementById(id);
+    if(!el) return 0;
+    const v = parseFloat(el.value);
+    return isNaN(v) ? 0 : v;
 }
-function setVal(id, val){ 
-    const el = document.getElementById(id); 
-    if(!el) return; 
-    el.value = (val === null || val === undefined) ? '' : Number(val).toFixed(2); 
+function setVal(id, val){
+    const el = document.getElementById(id);
+    if(!el) return;
+    el.value = (val === null || val === undefined) ? '' : Number(val).toFixed(2);
 }
 
 /* ===== Items array ===== */
 let itemsJsonEl = document.getElementById('itemsJson');
 let itemsArray = [];
-try { 
-    if(itemsJsonEl && itemsJsonEl.value) itemsArray = JSON.parse(itemsJsonEl.value); 
+try {
+    if(itemsJsonEl && itemsJsonEl.value) itemsArray = JSON.parse(itemsJsonEl.value);
 } catch(e){ itemsArray = []; }
 let editingIndex = null;
 
 /* ===== Compute Bora / TBWt ===== */
-function computeBoraParts(){ 
-    const bn = getFloat('bn'); 
-    const bnwt = getFloat('bnwt'); 
-    const bo = getFloat('bo'); 
-    const bowt = getFloat('bowt'); 
+function computeBoraParts(){
+    const bn = getFloat('bn');
+    const bnwt = getFloat('bnwt');
+    const bo = getFloat('bo');
+    const bowt = getFloat('bowt');
     const totalBora = (bn * bnwt * 0.01) + (bo * bowt * 0.01);
     setVal('tbwt', totalBora);   // TBWt mirrors this
-    return { totalBora };  
+    return { totalBora };
 }
 
 /* ===== Compute Qty and Amount ===== */
@@ -481,13 +481,13 @@ function computeQtyAndAmountAndUpdateUI(){
     const minWt = Math.min(Number(partywt) || 0, Number(millwt) || 0);
     const qty = Math.max(0, minWt - tbwt - frkwt);
     setVal('qty', qty);
-    
+
     // Amount calculation (project-specific 0.01 factor)
     let amount = 0;
     if (qty > 0 && rate !== 0) {
-        amount = qty * rate;
+        amount = (qty * rate) / 100;
     }
-    setVal('lineAmount', amount/100);
+    setVal('lineAmount', amount);
 
     return { qty, amount };
 }
@@ -504,12 +504,14 @@ function updateSummary() {
     });
 
     /* === Batav (PERCENT ON AMOUNT) === */
-    const batavPercent = getFloat('batavpercent'); 
+    const batavPercent = getFloat('batavpercent');
     const batavamt = (totalamt * batavPercent) / 100;
 
     /* === Dalali (PER UNIT ON WEIGHT) === */
     const drPerUnit = getFloat('dr');   // Rs per quintal
-    const dramt = drPerUnit * totalQty;
+    const dalaliQuintal = totalQty / 100;
+    const dramt = drPerUnit * dalaliQuintal; // paise
+
 
     /* === QI & Other === */
     const qiAmt = getFloat('qi_total');   // stored money
@@ -519,16 +521,16 @@ function updateSummary() {
 
 
     /* === FINAL TOTAL (REAL ACTUAL) === */
-    const finalAmt = totalamt - batavamt - dramt - (qiAmt * 100) - otherAmt;
+    const finalAmt = totalamt - batavamt - dramt - qiAmt - otherAmt;
 
     /* === DISPLAY FORMAT (÷100) === */
-    setVal('totalamt', (totalamt / 100));
-    setVal('batavamt', (batavamt / 100));
-    setVal('dramt', (dramt / 100));
-    setVal('total', (finalAmt / 100));
+    setVal('totalamt', totalamt);
+    setVal('batavamt', batavamt);
+    setVal('dramt', drPerUnit * dalaliQuintal); // ₹
+    setVal('total', finalAmt);
 
     const netAfterAdv = (finalAmt - advance);
-    setVal('netamt', (netAfterAdv / 100));
+    setVal('netamt', netAfterAdv);
 
     if (itemsJsonEl) itemsJsonEl.value = JSON.stringify(itemsArray);
 }
@@ -555,7 +557,7 @@ function updateUI() {
             <td>${Number(it.qty).toFixed(2)}</td>
             <td>${Number(it.frkwt || 0).toFixed(2)}</td>
             <td>${Number(it.rate).toFixed(2)}</td>
-            <td class="text-end">${(Number(it.amt) / 100).toFixed(2)}</td>
+            <td class="text-end">${Number(it.amt).toFixed(2)}</td>
             <td>${Number(it.partywt).toFixed(2)}</td>
             <td>${Number(it.millwt).toFixed(2)}</td>
             <td>${Number(it.diffwt).toFixed(2)}</td>
@@ -607,7 +609,7 @@ function resetAddFormFields(){
 const addBtnEl = document.getElementById('addItemBtn');
 if(addBtnEl){
     addBtnEl.addEventListener('click', function(){
-        const itemSelect = document.getElementById('itemSelect'); 
+        const itemSelect = document.getElementById('itemSelect');
         if(!itemSelect || !itemSelect.value){ alert('Select item'); return; }
         const itemName = itemSelect.options[itemSelect.selectedIndex].text;
 
@@ -697,9 +699,22 @@ function editItem(idx){
 }
 
 /* ===== DOMContentLoaded ===== */
-document.addEventListener('DOMContentLoaded', function(){ 
-    if(itemsArray.length) updateUI(); 
-    computeQtyAndAmountAndUpdateUI(); 
+document.addEventListener('DOMContentLoaded', function(){
+    if(itemsArray.length) updateUI();
+
+    // define ONLY once
+    const itemsBody = document.getElementById('addedItemsTableBody');
+    const qiPer = document.getElementById('qi_per');
+    const qiTotal = document.getElementById('qi_total');
+
+    // 🔁 RESTORE QI on UPDATE
+    if (qiTotal && qiPer && itemsBody) {
+        const lotCount = itemsBody.querySelectorAll('tr').length || 1;
+        const totalQi = parseFloat(qiTotal.value) || 0;
+        qiPer.value = (totalQi / lotCount).toFixed(2);
+    }
+
+    computeQtyAndAmountAndUpdateUI();
     updateSummary();
 
     // TBWt auto-calculated, lock input
@@ -777,12 +792,25 @@ document.addEventListener('DOMContentLoaded', function(){
     /* ===== QI Auto Calculation (per-lot) ===== */
     const qiPerInput = document.getElementById('qi_per');
     const qiTotalInput = document.getElementById('qi_total');
-    const itemsBody = document.getElementById('addedItemsTableBody');
+    // const itemsBody declared above in DOMContentLoaded, but likely needed here for scope?
+    // wait, itemsBody is local to DOMContentLoaded callback.
+    // updateQI likely fails if itemsBody not found?
+    // NO, see line 780: const itemsBody = document.getElementById('addedItemsTableBody'); inside updateQI?
+    // Let's check the provided replacement.
+
+    // Actually the user's snippet for sale.html defines updateQI OUTSIDE
+    // But here I'm replacing the whole block.
+    // I should be careful about scope.
+
+    // The previous code had `const itemsBody` inside `updateQI`.
+    // I will stick to what the previous code did for `updateQI` or fix it.
+
+    const itemsBody2 = document.getElementById('addedItemsTableBody'); // globalish scope for observers?
 
     function updateQI(){
-        if(!qiPerInput || !qiTotalInput || !itemsBody) return;
+        if(!qiPerInput || !qiTotalInput || !itemsBody2) return;
         const perLot = parseFloat(qiPerInput.value) || 0;
-        const lotCount = itemsBody.querySelectorAll('tr').length;
+        const lotCount = itemsBody2.querySelectorAll('tr').length;
         const qiTotal = perLot * lotCount;
         qiTotalInput.value = qiTotal.toFixed(2);
         updateSummary();
@@ -792,12 +820,18 @@ document.addEventListener('DOMContentLoaded', function(){
         qiPerInput.addEventListener('input', updateQI);
     }
 
-    const qiObserver = new MutationObserver(updateQI);
-    if(itemsBody){
-        qiObserver.observe(itemsBody, {childList: true});
+    // Updated Observer Logic
+    const qiObserver = new MutationObserver(() => {
+        if (document.activeElement === qiPerInput) {
+            updateQI();
+        }
+    });
+
+    if(itemsBody2){
+        qiObserver.observe(itemsBody2, {childList: true});
     }
 
-    updateQI();
+    // Removed unconditional updateQI(); call
 }); // DOMContentLoaded end
 
 // Enable/disable checkbox based on selected party email

@@ -1,6 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import User
 from django.utils.translation import gettext_lazy as _
+from decimal import Decimal
 
 # Create your models here.
 class HeadParty(models.Model):
@@ -114,6 +115,15 @@ class SaleDetails(models.Model):
     # NEW Lot number after diffwt
     lotno = models.CharField(max_length=50, blank=True, null=True)
 
+    # 👇 YAHI paste karo
+    def save(self, *args, **kwargs):
+        if self.rate and self.qty:
+            self.amount = (self.rate * self.qty) / Decimal('100')
+        else:
+            self.amount = Decimal('0.00')
+        super().save(*args, **kwargs)
+
+
     def __str__(self):
         return f"{self.item} - {self.qty}"
        
@@ -177,6 +187,13 @@ class PurchaseDetails(models.Model):
     frkwt = models.DecimalField("FrkWt", max_digits=12, decimal_places=2, default=0)
     # NEW Lot number after diffwt
     lotno = models.CharField(max_length=50, blank=True, null=True)
+
+    def save(self, *args, **kwargs):
+        if self.rate and self.qty:
+            self.amount = (self.rate * self.qty) / Decimal('100')
+        else:
+            self.amount = Decimal('0.00')
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"{self.item} - {self.qty}"
