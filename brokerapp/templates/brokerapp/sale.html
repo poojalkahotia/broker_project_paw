@@ -325,22 +325,47 @@
                         value="{{ sale.totalamt|default_if_none:'' }}">
                 </div>
 
-                <!-- Batav (was Bora) -->
+                <!-- Batav -->
                 <div class="d-flex align-items-center justify-content-end mb-2">
                     <label class="form-label me-2 mb-0">Batav:</label>
+
                     <input type="number" step="any" id="batavpercent" name="batavpercent"
-                        class="form-control text-end w-25 me-2" value="{{ sale.batavpercent|default_if_none:'' }}">
-                    <input type="number" step="any" id="batavamt" name="batavamt" class="form-control text-end w-25"
+                        class="form-control text-end w-25 me-2"
+                        value="{{ sale.batavpercent|default_if_none:'' }}">
+
+                    <input type="number" step="any" id="batavamt" name="batavamt"
+                        class="form-control text-end w-25 me-2"
                         readonly value="{{ sale.batavamt|default_if_none:'' }}">
+
+                    <!-- Batav Sign (+ / -) -->
+                    <select name="batav_sign" class="form-select w-auto">
+                        <option value="PLUS"
+                            {% if sale and sale.batav_sign == 'PLUS' %}selected{% endif %}>+</option>
+                        <option value="MINUS"
+                            {% if sale and sale.batav_sign == 'MINUS' %}selected{% endif %}>-</option>
+                    </select>
                 </div>
+
 
                 <!-- Dalali -->
                 <div class="d-flex align-items-center justify-content-end mb-2">
                     <label class="form-label me-2 mb-0">Dalali:</label>
-                    <input type="number" step="any" id="dr" name="dr" class="form-control text-end w-25 me-2"
+
+                    <input type="number" step="any" id="dr" name="dr"
+                        class="form-control text-end w-25 me-2"
                         value="{{ sale.dr|default_if_none:'' }}">
-                    <input type="number" step="any" id="dramt" name="dramt" class="form-control text-end w-25" readonly
-                        value="{{ sale.dramt|default_if_none:'' }}">
+
+                    <input type="number" step="any" id="dramt" name="dramt"
+                        class="form-control text-end w-25 me-2"
+                        readonly value="{{ sale.dramt|default_if_none:'' }}">
+
+                    <!-- Dalali Sign (+ / -) -->
+                    <select name="dr_sign" class="form-select w-auto">
+                        <option value="PLUS"
+                            {% if sale and sale.dr_sign == 'PLUS' %}selected{% endif %}>+</option>
+                        <option value="MINUS"
+                            {% if sale and sale.dr_sign == 'MINUS' %}selected{% endif %}>-</option>
+                    </select>
                 </div>
 
 

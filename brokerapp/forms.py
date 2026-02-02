@@ -163,8 +163,8 @@ class SaleMasterForm(BlankZeroModelForm):
         fields = [
             'invno', 'invdate', 'awakno',
             'party', 'broker', 'firm','extra', 'vehicleno',
-            'totalamt', 'batavpercent', 'batavamt',
-            'dr', 'dramt', 'qi', 'other', 'total',
+            'totalamt', 'batavpercent', 'batavamt','batav_sign',
+            'dr', 'dramt','dr_sign', 'qi', 'other', 'total',
             'advance', 'netamt', 'remark'
         ]
         widgets = {
@@ -176,8 +176,10 @@ class SaleMasterForm(BlankZeroModelForm):
             'totalamt': forms.NumberInput(attrs={'class': 'form-control'}),
             'batavpercent': forms.NumberInput(attrs={'class': 'form-control'}),
             'batavamt': forms.NumberInput(attrs={'class': 'form-control'}),
+            'batav_sign': forms.Select(attrs={'class': 'form-control'}),
             'dr': forms.NumberInput(attrs={'class': 'form-control'}),
             'dramt': forms.NumberInput(attrs={'class': 'form-control'}),
+            'dr_sign': forms.Select(attrs={'class': 'form-control'}),
             'qi': forms.NumberInput(attrs={'class': 'form-control'}),
             'other': forms.NumberInput(attrs={'class': 'form-control'}),
             'total': forms.NumberInput(attrs={'class': 'form-control'}),
@@ -251,8 +253,8 @@ class PurchaseMasterForm(BlankZeroModelForm):
         fields = [
             'invno', 'invdate', 'awakno',
             'party', 'broker', 'extra', 'vehicleno',
-            'totalamt', 'batavpercent', 'batavamt',
-            'dr', 'dramt', 'qi', 'other', 'total',
+            'totalamt', 'batavpercent', 'batavamt', 'batav_sign',
+            'dr', 'dramt', 'dr_sign', 'qi', 'other', 'total',
             'advance', 'netamt', 'remark'
         ]
         widgets = {
@@ -264,8 +266,11 @@ class PurchaseMasterForm(BlankZeroModelForm):
             'totalamt': forms.NumberInput(attrs={'class': 'form-control'}),
             'batavpercent': forms.NumberInput(attrs={'class': 'form-control'}),
             'batavamt': forms.NumberInput(attrs={'class': 'form-control'}),
+            'batav_sign': forms.Select(attrs={'class': 'form-control'}),
+
             'dr': forms.NumberInput(attrs={'class': 'form-control'}),
             'dramt': forms.NumberInput(attrs={'class': 'form-control'}),
+            'dr_sign': forms.Select(attrs={'class': 'form-control'}),
             'qi': forms.NumberInput(attrs={'class': 'form-control'}),
             'other': forms.NumberInput(attrs={'class': 'form-control'}),
             'total': forms.NumberInput(attrs={'class': 'form-control'}),

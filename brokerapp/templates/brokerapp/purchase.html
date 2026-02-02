@@ -358,24 +358,46 @@
                 <!-- Batav -->
                 <div class="d-flex align-items-center justify-content-end mb-2">
                     <label class="form-label me-2 mb-0">Batav:</label>
+
                     <input type="number" step="any" id="batavpercent" name="batavpercent"
-                           class="form-control text-end w-25 me-2"
-                           value="{{ purchase.batavpercent|default_if_none:'' }}">
+                        class="form-control text-end w-25 me-2"
+                        value="{{ purchase.batavpercent|default_if_none:'' }}">
+
                     <input type="number" step="any" id="batavamt" name="batavamt"
-                           class="form-control text-end w-25"
-                           readonly value="{{ purchase.batavamt|default_if_none:'' }}">
+                        class="form-control text-end w-25 me-2"
+                        readonly value="{{ purchase.batavamt|default_if_none:'' }}">
+
+                    <!-- Batav Sign -->
+                    <select name="batav_sign" class="form-select w-auto">
+                        <option value="PLUS"
+                        {% if purchase and purchase.batav_sign == 'PLUS' %}selected{% endif %}>+</option>
+                        <option value="MINUS"
+                        {% if purchase and purchase.batav_sign == 'MINUS' %}selected{% endif %}>-</option>
+                    </select>
                 </div>
+
 
                 <!-- Dalali -->
                 <div class="d-flex align-items-center justify-content-end mb-2">
                     <label class="form-label me-2 mb-0">Dalali:</label>
+
                     <input type="number" step="any" id="dr" name="dr"
-                           class="form-control text-end w-25 me-2"
-                           value="{{ purchase.dr|default_if_none:'' }}">
+                        class="form-control text-end w-25 me-2"
+                        value="{{ purchase.dr|default_if_none:'' }}">
+
                     <input type="number" step="any" id="dramt" name="dramt"
-                           class="form-control text-end w-25"
-                           readonly value="{{ purchase.dramt|default_if_none:'' }}">
+                        class="form-control text-end w-25 me-2"
+                        readonly value="{{ purchase.dramt|default_if_none:'' }}">
+
+                    <!-- Dalali Sign -->
+                    <select name="dr_sign" class="form-select w-auto">
+                        <option value="PLUS"
+                        {% if purchase and purchase.dr_sign == 'PLUS' %}selected{% endif %}>+</option>
+                        <option value="MINUS"
+                        {% if purchase and purchase.dr_sign == 'MINUS' %}selected{% endif %}>-</option>
+                    </select>
                 </div>
+
 
                 <!-- QI per-lot (same pattern as Sale) -->
                 <div class="d-flex align-items-center justify-content-end mb-2">

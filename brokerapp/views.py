@@ -32,6 +32,7 @@ from django.core.mail import EmailMessage
 
 from django.conf import settings
 
+
 try:
     from openpyxl import Workbook
     from openpyxl.utils import get_column_letter
@@ -93,7 +94,8 @@ def to_decimal(val, default=Decimal('0')):
     except (InvalidOperation, TypeError, ValueError):
         return default
 
-
+def apply_sign(amount, sign):
+    return -amount if sign == 'MINUS' else amount
 
 
 # -----------------------
@@ -197,16 +199,28 @@ def save_sale(request):
 
         batavpercent = to_decimal(request.POST.get("batavpercent", 0))
         batavamt = to_decimal(request.POST.get("batavamt", 0))
+        batav_sign = request.POST.get("batav_sign", "PLUS")
 
         # dr = to_decimal(request.POST.get("dr", 0))
         # dramt = (total_amt * dr / Decimal("100")).quantize(Decimal("0.01"))
         dr = to_decimal(request.POST.get("dr", 0))
         dramt = to_decimal(request.POST.get("dramt", 0))
+        dr_sign = request.POST.get("dr_sign", "PLUS")
         qi = to_decimal(request.POST.get("qi", 0))
         other = to_decimal(request.POST.get("other", 0))
         advance = to_decimal(request.POST.get("advance", 0))
-        total = to_decimal(request.POST.get("total", 0))
-        netamt = to_decimal(request.POST.get("netamt", 0))
+        batav_final = apply_sign(batavamt, batav_sign)
+        dr_final = apply_sign(dramt, dr_sign)
+
+        total = (
+            total_amt
+            - batav_final
+            - dr_final
+            - other
+        ).quantize(Decimal("0.01"))
+
+        netamt = (total - advance).quantize(Decimal("0.01"))
+
 
         # Resolve FKs inside same org
         party = get_object_or_404(HeadParty, pk=party_pk, org=request.current_org)
@@ -236,8 +250,10 @@ def save_sale(request):
             totalamt=total_amt.quantize(Decimal("0.01")),
             batavpercent=batavpercent,
             batavamt=batavamt,
+            batav_sign=batav_sign,
             dr=dr,
             dramt=dramt,
+            dr_sign=dr_sign,
             qi=qi,
             other=other,
             total=total,
@@ -458,16 +474,25 @@ def update_sale(request, invno):
 
         batavpercent = to_decimal(request.POST.get("batavpercent", 0))
         batavamt = to_decimal(request.POST.get("batavamt", 0))
-
+        batav_sign = request.POST.get("batav_sign", "PLUS")
         dr = to_decimal(request.POST.get("dr", 0))
         dramt = to_decimal(request.POST.get("dramt", 0))
-
+        dr_sign = request.POST.get("dr_sign", "PLUS")
         qi = to_decimal(request.POST.get("qi", 0))
         other = to_decimal(request.POST.get("other", 0))
         advance = to_decimal(request.POST.get("advance", 0))
 
-        total = to_decimal(request.POST.get("total", 0))
-        netamt = to_decimal(request.POST.get("netamt", 0))
+        batav_final = apply_sign(batavamt, batav_sign)
+        dr_final = apply_sign(dramt, dr_sign)
+
+        total = (
+            total_amt
+            - batav_final
+            - dr_final
+            - other
+        ).quantize(Decimal("0.01"))
+
+        netamt = (total - advance).quantize(Decimal("0.01"))
 
         # ---------- FOREIGN KEYS ----------
         party = get_object_or_404(HeadParty, pk=party_pk, org=request.current_org)
@@ -493,8 +518,10 @@ def update_sale(request, invno):
         sale.totalamt = total_amt.quantize(Decimal("0.01"))
         sale.batavpercent = batavpercent
         sale.batavamt = batavamt
+        sale.batav_sign = batav_sign
         sale.dr = dr
         sale.dramt = dramt
+        sale.dr_sign = dr_sign
         sale.qi = qi
         sale.other = other
         sale.advance = advance
@@ -1258,6 +1285,8 @@ def purchase_form(request, invno=None):
     }
     return render(request, "brokerapp/purchase.html", context)
 
+def apply_sign(amount, sign):
+    return -amount if sign == 'MINUS' else amount
 
 
 @transaction.atomic
@@ -1300,16 +1329,29 @@ def save_purchase(request):
 
         batavpercent = to_decimal(request.POST.get("batavpercent", 0))
         batavamt = to_decimal(request.POST.get("batavamt", 0))
+        batav_sign = request.POST.get("batav_sign", "PLUS")
 
         dr = to_decimal(request.POST.get("dr", 0))
         dramt = to_decimal(request.POST.get("dramt", 0))
+        dr_sign = request.POST.get("dr_sign", "PLUS")
 
         qi = to_decimal(request.POST.get("qi", 0))
-        other = to_decimal(request.POST.get("other", 0))
+        other = to_decimal(request.POST.get("other", 0))    
+
         advance = to_decimal(request.POST.get("advance", 0))
 
-        total = to_decimal(request.POST.get("total", 0))
-        netamt = to_decimal(request.POST.get("netamt", 0))
+        batav_final = apply_sign(batavamt, batav_sign)
+        dr_final = apply_sign(dramt, dr_sign)
+
+        total = (
+            total_amt
+            - batav_final
+            - dr_final
+            - other
+        ).quantize(Decimal("0.01"))
+
+        netamt = (total - advance).quantize(Decimal("0.01"))
+
 
         # -------- Resolve FKs within same org --------
         party = get_object_or_404(HeadParty, pk=party_pk, org=request.current_org)
@@ -1338,8 +1380,10 @@ def save_purchase(request):
             totalamt=total_amt.quantize(Decimal("0.01")),
             batavpercent=batavpercent,
             batavamt=batavamt,
+            batav_sign=batav_sign,
             dr=dr,
             dramt=dramt,
+            dr_sign=dr_sign,
             qi=qi,
             other=other,
             total=total,
@@ -1561,16 +1605,28 @@ def update_purchase(request, invno):
 
         batavpercent = to_decimal(request.POST.get("batavpercent", 0))
         batavamt = to_decimal(request.POST.get("batavamt", 0))
+        batav_sign = request.POST.get("batav_sign", "PLUS")
 
         dr = to_decimal(request.POST.get("dr", 0))
         dramt = to_decimal(request.POST.get("dramt", 0))
+        dr_sign = request.POST.get("dr_sign", "PLUS")
 
         qi = to_decimal(request.POST.get("qi", 0))
         other = to_decimal(request.POST.get("other", 0))
         advance = to_decimal(request.POST.get("advance", 0))
 
-        total = to_decimal(request.POST.get("total", 0))
-        netamt = to_decimal(request.POST.get("netamt", 0))
+        batav_final = apply_sign(batavamt, batav_sign)
+        dr_final = apply_sign(dramt, dr_sign)
+
+        total = (
+            total_amt
+            - batav_final
+            - dr_final
+            - other
+        ).quantize(Decimal("0.01"))
+
+        netamt = (total - advance).quantize(Decimal("0.01"))
+
 
         # ---------- FOREIGN KEYS ----------
         party = get_object_or_404(HeadParty, pk=party_pk, org=request.current_org)
@@ -1596,8 +1652,11 @@ def update_purchase(request, invno):
         purchase.totalamt = total_amt.quantize(Decimal("0.01"))
         purchase.batavpercent = batavpercent
         purchase.batavamt = batavamt
+        purchase.batav_sign = batav_sign
+
         purchase.dr = dr
         purchase.dramt = dramt
+        purchase.dr_sign = dr_sign
         purchase.qi = qi
         purchase.other = other
         purchase.advance = advance
