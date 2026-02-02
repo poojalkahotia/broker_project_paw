@@ -216,6 +216,7 @@ def save_sale(request):
             total_amt
             - batav_final
             - dr_final
+            - qi
             - other
         ).quantize(Decimal("0.01"))
 
@@ -489,6 +490,7 @@ def update_sale(request, invno):
             total_amt
             - batav_final
             - dr_final
+            - qi
             - other
         ).quantize(Decimal("0.01"))
 
@@ -1347,6 +1349,7 @@ def save_purchase(request):
             total_amt
             - batav_final
             - dr_final
+            - qi
             - other
         ).quantize(Decimal("0.01"))
 
@@ -1622,6 +1625,7 @@ def update_purchase(request, invno):
             total_amt
             - batav_final
             - dr_final
+            - qi
             - other
         ).quantize(Decimal("0.01"))
 

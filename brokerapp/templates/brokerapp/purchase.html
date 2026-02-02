@@ -513,7 +513,9 @@ function computeQtyAndAmountAndUpdateUI(){
 
     return { qty, amount };
 }
-
+function applySign(amount, sign) {
+    return sign === 'MINUS' ? -amount : amount;
+}
 /* ===== Update Summary ===== */
 function updateSummary() {
     let totalamt = 0;
@@ -534,6 +536,9 @@ function updateSummary() {
     const dalaliQuintal = totalQty / 100;
     const dramt = drPerUnit * dalaliQuintal; // paise
 
+    const batavSign = document.querySelector('select[name="batav_sign"]')?.value || 'PLUS';
+    const drSign = document.querySelector('select[name="dr_sign"]')?.value || 'PLUS';
+
 
     /* === QI & Other === */
     const qiAmt = getFloat('qi_total');   // stored money
@@ -542,8 +547,16 @@ function updateSummary() {
 
 
 
-    /* === FINAL TOTAL (REAL ACTUAL) === */
-    const finalAmt = totalamt - batavamt - dramt - qiAmt - otherAmt;
+   /* === FINAL TOTAL (actual calculation) === */
+    const batavFinal = applySign(batavamt, batavSign);
+    const drFinal = applySign(dramt, drSign);
+
+    const finalAmt =
+        totalamt
+        - batavFinal
+        - drFinal
+        - qiAmt 
+        - otherAmt;
 
     /* === DISPLAY FORMAT (÷100) === */
     setVal('totalamt', totalamt);
