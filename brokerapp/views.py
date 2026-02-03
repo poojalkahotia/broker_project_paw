@@ -199,23 +199,22 @@ def save_sale(request):
 
         batavpercent = to_decimal(request.POST.get("batavpercent", 0))
         batavamt = to_decimal(request.POST.get("batavamt", 0))
-        batav_sign = request.POST.get("batav_sign", "PLUS")
+        
 
         # dr = to_decimal(request.POST.get("dr", 0))
         # dramt = (total_amt * dr / Decimal("100")).quantize(Decimal("0.01"))
         dr = to_decimal(request.POST.get("dr", 0))
         dramt = to_decimal(request.POST.get("dramt", 0))
-        dr_sign = request.POST.get("dr_sign", "PLUS")
+        
         qi = to_decimal(request.POST.get("qi", 0))
         other = to_decimal(request.POST.get("other", 0))
         advance = to_decimal(request.POST.get("advance", 0))
-        batav_final = apply_sign(batavamt, batav_sign)
-        dr_final = apply_sign(dramt, dr_sign)
+        
 
         total = (
             total_amt
-            - batav_final
-            - dr_final
+            + batavamt
+            + dramt
             - qi
             - other
         ).quantize(Decimal("0.01"))
@@ -251,10 +250,10 @@ def save_sale(request):
             totalamt=total_amt.quantize(Decimal("0.01")),
             batavpercent=batavpercent,
             batavamt=batavamt,
-            batav_sign=batav_sign,
+            
             dr=dr,
             dramt=dramt,
-            dr_sign=dr_sign,
+            
             qi=qi,
             other=other,
             total=total,
@@ -475,21 +474,19 @@ def update_sale(request, invno):
 
         batavpercent = to_decimal(request.POST.get("batavpercent", 0))
         batavamt = to_decimal(request.POST.get("batavamt", 0))
-        batav_sign = request.POST.get("batav_sign", "PLUS")
         dr = to_decimal(request.POST.get("dr", 0))
         dramt = to_decimal(request.POST.get("dramt", 0))
-        dr_sign = request.POST.get("dr_sign", "PLUS")
+       
         qi = to_decimal(request.POST.get("qi", 0))
         other = to_decimal(request.POST.get("other", 0))
         advance = to_decimal(request.POST.get("advance", 0))
 
-        batav_final = apply_sign(batavamt, batav_sign)
-        dr_final = apply_sign(dramt, dr_sign)
+        
 
         total = (
             total_amt
-            - batav_final
-            - dr_final
+            + batavamt
+            + dramt
             - qi
             - other
         ).quantize(Decimal("0.01"))
@@ -520,10 +517,9 @@ def update_sale(request, invno):
         sale.totalamt = total_amt.quantize(Decimal("0.01"))
         sale.batavpercent = batavpercent
         sale.batavamt = batavamt
-        sale.batav_sign = batav_sign
         sale.dr = dr
         sale.dramt = dramt
-        sale.dr_sign = dr_sign
+
         sale.qi = qi
         sale.other = other
         sale.advance = advance
@@ -1331,24 +1327,21 @@ def save_purchase(request):
 
         batavpercent = to_decimal(request.POST.get("batavpercent", 0))
         batavamt = to_decimal(request.POST.get("batavamt", 0))
-        batav_sign = request.POST.get("batav_sign", "PLUS")
+        
 
         dr = to_decimal(request.POST.get("dr", 0))
         dramt = to_decimal(request.POST.get("dramt", 0))
-        dr_sign = request.POST.get("dr_sign", "PLUS")
-
+        
         qi = to_decimal(request.POST.get("qi", 0))
         other = to_decimal(request.POST.get("other", 0))    
 
         advance = to_decimal(request.POST.get("advance", 0))
 
-        batav_final = apply_sign(batavamt, batav_sign)
-        dr_final = apply_sign(dramt, dr_sign)
-
+        
         total = (
             total_amt
-            - batav_final
-            - dr_final
+            + batavamt
+            + dramt
             - qi
             - other
         ).quantize(Decimal("0.01"))
@@ -1383,10 +1376,10 @@ def save_purchase(request):
             totalamt=total_amt.quantize(Decimal("0.01")),
             batavpercent=batavpercent,
             batavamt=batavamt,
-            batav_sign=batav_sign,
+            
             dr=dr,
             dramt=dramt,
-            dr_sign=dr_sign,
+            
             qi=qi,
             other=other,
             total=total,
@@ -1608,23 +1601,22 @@ def update_purchase(request, invno):
 
         batavpercent = to_decimal(request.POST.get("batavpercent", 0))
         batavamt = to_decimal(request.POST.get("batavamt", 0))
-        batav_sign = request.POST.get("batav_sign", "PLUS")
+        
 
         dr = to_decimal(request.POST.get("dr", 0))
         dramt = to_decimal(request.POST.get("dramt", 0))
-        dr_sign = request.POST.get("dr_sign", "PLUS")
+        
 
         qi = to_decimal(request.POST.get("qi", 0))
         other = to_decimal(request.POST.get("other", 0))
         advance = to_decimal(request.POST.get("advance", 0))
 
-        batav_final = apply_sign(batavamt, batav_sign)
-        dr_final = apply_sign(dramt, dr_sign)
+        
 
         total = (
             total_amt
-            - batav_final
-            - dr_final
+            + batavamt
+            + dramt
             - qi
             - other
         ).quantize(Decimal("0.01"))
