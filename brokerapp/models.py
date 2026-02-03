@@ -45,10 +45,7 @@ class HeadItem(models.Model):
     def __str__(self):
         return self.item_name
 
-SIGN_CHOICES = [
-    ('PLUS', '+'),
-    ('MINUS', '-'),
-]
+
 
 class SaleMaster(models.Model):
     invno = models.AutoField(primary_key=True)
@@ -71,19 +68,11 @@ class SaleMaster(models.Model):
     # (since DB is empty it's safe to replace names)
     batavpercent = models.DecimalField(max_digits=5, decimal_places=2, default=0)   # e.g. %
     batavamt = models.DecimalField(max_digits=12, decimal_places=2, default=0)
-    batav_sign = models.CharField(
-       max_length=5,
-       choices=SIGN_CHOICES,
-       default='PLUS'
-   )
+    
     # Dalali (dr/dramt) kept as-is; after Dalali add QI
     dr = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     dramt = models.DecimalField(max_digits=12, decimal_places=2, default=0)
-    dr_sign = models.CharField(
-       max_length=5,
-       choices=SIGN_CHOICES,
-       default='PLUS'
-   )
+    
     # NEW QI field after Dalali
     qi = models.DecimalField(max_digits=12, decimal_places=2, default=0)
 
@@ -162,19 +151,11 @@ class PurchaseMaster(models.Model):
     # RENAMED fields
     batavpercent = models.DecimalField(max_digits=5, decimal_places=2, default=0)
     batavamt = models.DecimalField(max_digits=12, decimal_places=2, default=0)
-    batav_sign = models.CharField(
-       max_length=5,
-       choices=SIGN_CHOICES,
-       default='PLUS'
-   )
+    
 
     dr = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     dramt = models.DecimalField(max_digits=12, decimal_places=2, default=0)
-    dr_sign = models.CharField(
-       max_length=5,
-       choices=SIGN_CHOICES,
-       default='PLUS'
-   )
+    
     # NEW QI field
     qi = models.DecimalField(max_digits=12, decimal_places=2, default=0)
 
