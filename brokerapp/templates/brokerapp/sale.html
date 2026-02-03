@@ -337,15 +337,8 @@
                         class="form-control text-end w-25 me-2"
                         readonly value="{{ sale.batavamt|default_if_none:'' }}">
 
-                    <!-- Batav Sign (+ / -) -->
-                    <select name="batav_sign" class="form-select w-auto">
-                        <option value="PLUS"
-                            {% if sale and sale.batav_sign == 'PLUS' %}selected{% endif %}>+</option>
-                        <option value="MINUS"
-                            {% if sale and sale.batav_sign == 'MINUS' %}selected{% endif %}>-</option>
-                    </select>
+                    
                 </div>
-
 
                 <!-- Dalali -->
                 <div class="d-flex align-items-center justify-content-end mb-2">
@@ -359,13 +352,7 @@
                         class="form-control text-end w-25 me-2"
                         readonly value="{{ sale.dramt|default_if_none:'' }}">
 
-                    <!-- Dalali Sign (+ / -) -->
-                    <select name="dr_sign" class="form-select w-auto">
-                        <option value="PLUS"
-                            {% if sale and sale.dr_sign == 'PLUS' %}selected{% endif %}>+</option>
-                        <option value="MINUS"
-                            {% if sale and sale.dr_sign == 'MINUS' %}selected{% endif %}>-</option>
-                    </select>
+                   
                 </div>
 
 
@@ -485,9 +472,7 @@
         return { qty, amount };
     }
 
-    function applySign(amount, sign) {
-    return sign === 'MINUS' ? -amount : amount;
-}
+   
 
 
     /* ===== Update Summary ===== */
@@ -510,22 +495,20 @@
     const dalaliQuintal = totalQty / 100;
     const dramt = drPerUnit * dalaliQuintal; // paise
 
-    const batavSign = document.querySelector('select[name="batav_sign"]')?.value || 'PLUS';
-    const drSign = document.querySelector('select[name="dr_sign"]')?.value || 'PLUS';
+    
 
     /* === QI & Other === */
-    const qiAmt = getFloat('qi_total'); 
-    const otherAmt = getFloat('other');
-    const advance = getFloat('advance');
+    const qiAmt = Math.abs(getFloat('qi_total'));
+    const otherAmt = Math.abs(getFloat('other'));
+const advance = Math.abs(getFloat('advance'));
 
     /* === FINAL TOTAL (actual calculation) === */
-    const batavFinal = applySign(batavamt, batavSign);
-    const drFinal = applySign(dramt, drSign);
+    
 
     const finalAmt =
         totalamt
-        - batavFinal
-        - drFinal
+        + batavamt
+        + dramt
         - qiAmt 
         - otherAmt;
 
