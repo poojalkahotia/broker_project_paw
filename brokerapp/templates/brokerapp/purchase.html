@@ -489,7 +489,7 @@ function computeQtyAndAmountAndUpdateUI(){
     // Qty = min(PWt, MWt) - TBWt - FrkWt. Never below 0.
     const tbwt = Number(totalBora) || 0;
     const minWt = Math.min(Number(partywt) || 0, Number(millwt) || 0);
-    const qty = Math.max(0, minWt - tbwt - frkwt);
+    const qty = Math.max(0, frkwt - tbwt);
     setVal('qty', qty);
 
     // Amount calculation (project-specific 0.01 factor)

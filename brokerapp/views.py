@@ -266,6 +266,15 @@ def save_sale(request):
         for it in items:
             item_id = it.get("item_id")
             item_obj = get_object_or_404(HeadItem, pk=item_id, org=request.current_org)
+            # ✅ SALE WEIGHT RULE (ONLY CHANGE)
+            partywt = to_decimal(it.get("partywt", 0))
+            millwt = to_decimal(it.get("millwt", 0))
+
+            # Sale: higher weight lena hai
+            if partywt and millwt:
+                final_wt = max(partywt, millwt)
+            else:
+                final_wt = partywt or millwt
             SaleDetails.objects.create(
                 salemaster=sale,
                 item=item_obj,
@@ -278,10 +287,10 @@ def save_sale(request):
                 qty=to_decimal(it.get("qty", 0)),
                 rate=to_decimal(it.get("rate", 0)),
                 
-                partywt=to_decimal(it.get("partywt", 0)),
-                millwt=to_decimal(it.get("millwt", 0)),
-                frkwt=to_decimal(it.get("frkwt", 0)),
-                diffwt=to_decimal(it.get("diffwt", 0)),
+                partywt=partywt,
+                millwt=millwt,
+                frkwt=final_wt,
+                diffwt=(partywt - millwt) if partywt and millwt else Decimal("0"),
                 lotno=it.get("lotno", "").strip(),
             )
 
@@ -534,6 +543,15 @@ def update_sale(request, invno):
         SaleDetails.objects.filter(salemaster=sale).delete()
         for it in items:
             item_obj = get_object_or_404(HeadItem, pk=it.get("item_id"), org=request.current_org)
+            # ✅ SALE UPDATE WEIGHT RULE (IMPORTANT)
+            partywt = to_decimal(it.get("partywt", 0))
+            millwt = to_decimal(it.get("millwt", 0))
+
+            # Sale: higher weight lena hai
+            if partywt and millwt:
+                final_wt = max(partywt, millwt)
+            else:
+                final_wt = partywt or millwt
             SaleDetails.objects.create(
                 salemaster=sale,
                 item=item_obj,
@@ -546,10 +564,10 @@ def update_sale(request, invno):
                 qty=to_decimal(it.get("qty", 0)),
                 rate=to_decimal(it.get("rate", 0)),
                
-                partywt=to_decimal(it.get("partywt", 0)),
-                millwt=to_decimal(it.get("millwt", 0)),
-                frkwt=to_decimal(it.get("frkwt", 0)),
-                diffwt=to_decimal(it.get("diffwt", 0)),
+                partywt=partywt,
+                millwt=millwt,
+                frkwt=final_wt,
+                diffwt=(partywt - millwt) if partywt and millwt else Decimal("0"),
                 lotno=it.get("lotno", "").strip(),
             )
 
@@ -1392,6 +1410,15 @@ def save_purchase(request):
         for it in items:
             item_id = it.get("item_id")
             item_obj = get_object_or_404(HeadItem, pk=item_id, org=request.current_org)
+            # ✅ PURCHASE WEIGHT RULE (ONLY CHANGE)
+            partywt = to_decimal(it.get("partywt", 0))
+            millwt = to_decimal(it.get("millwt", 0))
+
+            # Purchase: lower weight lena hai
+            if partywt and millwt:
+                final_wt = min(partywt, millwt)
+            else:
+                final_wt = partywt or millwt
 
             PurchaseDetails.objects.create(
                 purchasemaster=purchase,
@@ -1405,10 +1432,10 @@ def save_purchase(request):
                 qty=to_decimal(it.get("qty", 0)),
                 rate=to_decimal(it.get("rate", 0)),
                 
-                partywt=to_decimal(it.get("partywt", 0)),
-                millwt=to_decimal(it.get("millwt", 0)),
-                frkwt=to_decimal(it.get("frkwt", 0)),    # FrkWt field in model
-                diffwt=to_decimal(it.get("diffwt", 0)),
+                partywt=partywt,
+                millwt=millwt,
+                frkwt=final_wt,
+                diffwt=(partywt - millwt) if partywt and millwt else Decimal("0"),
                 lotno=it.get("lotno", "").strip(),
             )
 
@@ -1667,8 +1694,17 @@ def update_purchase(request, invno):
 
         for it in items:
             item_obj = get_object_or_404(
-                HeadItem, pk=it.get("item_id"), org=request.current_org
-            )
+                HeadItem, pk=it.get("item_id"), org=request.current_org)
+                # ✅ PURCHASE UPDATE WEIGHT RULE
+            partywt = to_decimal(it.get("partywt", 0))
+            millwt = to_decimal(it.get("millwt", 0))
+
+            # Purchase: lower weight lena hai
+            if partywt and millwt:
+                final_wt = min(partywt, millwt)
+            else:
+                final_wt = partywt or millwt
+           
             PurchaseDetails.objects.create(
                 purchasemaster=purchase,
                 item=item_obj,
@@ -1681,10 +1717,10 @@ def update_purchase(request, invno):
                 qty=to_decimal(it.get("qty", 0)),
                 rate=to_decimal(it.get("rate", 0)),
                 
-                partywt=to_decimal(it.get("partywt", 0)),
-                millwt=to_decimal(it.get("millwt", 0)),
-                frkwt=to_decimal(it.get("frkwt", 0)),
-                diffwt=to_decimal(it.get("diffwt", 0)),
+                partywt=partywt,
+                millwt=millwt,
+                frkwt=final_wt,
+                diffwt=(partywt - millwt) if partywt and millwt else Decimal("0"),
                 lotno=it.get("lotno", "").strip(),
             )
 

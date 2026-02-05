@@ -416,6 +416,19 @@
         const v = parseFloat(el.value);
         return isNaN(v) ? 0 : v;
     }
+     /* ==== SALE WEIGHT AUTO CALC (FAST + SMART) ==== */
+    
+    
+
+
+    // Auto-bind (safe)
+    document.addEventListener('DOMContentLoaded', function () {
+        const p = document.getElementById('partywt');
+        const m = document.getElementById('millwt');
+
+        if (p) p.addEventListener('input', recalcSaleWeight);
+        if (m) m.addEventListener('input', recalcSaleWeight);
+    });
     function setVal(id, val) {
         const el = document.getElementById(id);
         if (!el) return;
@@ -458,7 +471,7 @@
         // Qty = min(PWt, MWt) - TBWt - FrkWt. Never below 0.
         const tbwt = Number(totalBora) || 0;
         const minWt = Math.min(Number(partywt) || 0, Number(millwt) || 0);
-        const qty = Math.max(0, minWt - tbwt - frkwt);
+        const qty = Math.max(0, frkwt - tbwt);
         setVal('qty', qty);
 
         // Amount calculation: keep existing 0.01 factor (project-specific).
