@@ -232,17 +232,41 @@
             <!-- PWt -->
             <div class="col-md-auto" style="width:60px;">
                 <label class="form-label mb-1">PWt</label>
-                <input type="number" id="partywt" name="partywt"
-                       class="form-control form-control-sm text-end"
-                       step="any" oninput="computeQtyAndAmountAndUpdateUI()">
+                <input type="number"
+                    id="partywt"
+                    name="partywt"
+                    class="form-control form-control-sm text-end"
+                    step="any"
+                    oninput="
+                        calcWeight({
+                            partyId:'partywt',
+                            millId:'millwt',
+                            frkId:'frkwt',
+                            diffId:'diffwt',
+                            mode:'sale'
+                        });
+                        computeQtyAndAmountAndUpdateUI();
+                    ">
             </div>
 
             <!-- MWt -->
             <div class="col-md-auto" style="width:60px;">
                 <label class="form-label mb-1">MWt</label>
-                <input type="number" id="millwt" name="millwt"
-                       class="form-control form-control-sm text-end"
-                       step="any" oninput="computeQtyAndAmountAndUpdateUI()">
+                <input type="number"
+                    id="millwt"
+                    name="millwt"
+                    class="form-control form-control-sm text-end"
+                    step="any"
+                    oninput="
+                        calcWeight({
+                            partyId:'partywt',
+                            millId:'millwt',
+                            frkId:'frkwt',
+                            diffId:'diffwt',
+                            mode:'purchase'
+                        });
+                        computeQtyAndAmountAndUpdateUI();
+                    ">
             </div>
 
             <!-- DWt -->
@@ -440,7 +464,7 @@
     </form>
 </div>
 
-
+<script src="{% static 'js/weight_calc.js' %}"></script>
 <script>
 /* ===== Helper functions ===== */
 function getFloat(id){
