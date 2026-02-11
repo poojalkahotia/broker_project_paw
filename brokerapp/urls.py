@@ -11,13 +11,13 @@ urlpatterns = [
 
     path('parties/', views.party_view, name='party_create'),  # create/new
     path('parties/list/', views.party_view, name='party'),    # optional list (same view)
-    path('parties/edit/<str:pk>/', views.party_view, name='party_edit'),
-    path('parties/delete/<str:pk>/', views.party_delete, name='party_delete'),
+    path('parties/edit/<path:pk>/', views.party_view, name='party_edit'),
+    path('parties/delete/<path:pk>/', views.party_delete, name='party_delete'),
     
     path('broker/', views.broker_view, name='broker'), 
     path('broker/', views.broker_view, name='broker_create'),
-    path('broker/edit/<str:pk>/', views.broker_view, name='broker_edit'),
-    path('broker/delete/<str:pk>/', views.broker_delete, name='broker_delete'),
+    path('broker/edit/<path:pk>/', views.broker_view, name='broker_edit'),
+    path('broker/delete/<path:pk>/', views.broker_delete, name='broker_delete'),
     
     path('firm/', views.firm_view, name='firm'),
     
