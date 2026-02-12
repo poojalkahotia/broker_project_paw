@@ -1675,11 +1675,9 @@ def update_purchase(request, invno):
         purchase.totalamt = total_amt.quantize(Decimal("0.01"))
         purchase.batavpercent = batavpercent
         purchase.batavamt = batavamt
-        purchase.batav_sign = batav_sign
 
         purchase.dr = dr
         purchase.dramt = dramt
-        purchase.dr_sign = dr_sign
         purchase.qi = qi
         purchase.other = other
         purchase.advance = advance
