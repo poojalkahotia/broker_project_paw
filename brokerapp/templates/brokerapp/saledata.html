@@ -11,6 +11,7 @@
                     <th>Invoice No</th>
                     <th>Invoice Date</th>
                     <th>Party Name</th>
+                    <th>Broker Name</th>
                     <th>Firm</th>
                     <th class="text-end">Amount</th>
                     <th>Actions</th>
@@ -22,7 +23,7 @@
                     <td>{{ sale.invno }}</td>
                     <td>{{ sale.invdate|date:"d/m/Y" }}</td>
                     <td>{{ sale.party.partyname }}</td>
-
+                    <td>{{ sale.broker.brokername }}</td>
                     <!-- Firm cell (null-safe) -->
                     <td>
                         {% if sale.firm %}
@@ -42,7 +43,7 @@
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="6" class="text-center text-muted">No sales found.</td>
+                    <td colspan="7" class="text-center text-muted">No sales found.</td>
                 </tr>
                 {% endfor %}
             </tbody>

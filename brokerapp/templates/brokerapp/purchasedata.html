@@ -11,6 +11,7 @@
                     <th>Invoice No</th>
                     <th>Invoice Date</th>
                     <th>Party Name</th>
+                     <th>Broker Name</th>
                     <th>Firm</th>
                     <th class="text-end">Amount</th>
                     <th>Actions</th>
@@ -22,7 +23,7 @@
                     <td>{{ purchase.invno }}</td>
                     <td>{{ purchase.invdate|date:"d/m/Y" }}</td>
                     <td>{{ purchase.party.partyname }}</td>
-
+                    <td>{{ purchase.broker.brokername }}</td>
                     <!-- Firm column (null-safe) -->
                     <td>
                         {% if purchase.firm %}
@@ -46,7 +47,7 @@
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="6" class="text-center text-muted">No purchases found.</td>
+                    <td colspan="7" class="text-center text-muted">No purchases found.</td>
                 </tr>
                 {% endfor %}
             </tbody>
