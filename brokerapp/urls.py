@@ -55,6 +55,7 @@ urlpatterns = [
     path('purchase/update/<int:invno>/', views.update_purchase, name='update_purchase'),
     path('purchase/delete/<int:invno>/', views.delete_purchase, name='delete_purchase'),
     path('purchasedata/', views.purchase_data_view, name='purchasedata'),
+    path("purchase-search/", views.purchase_search_view, name="purchase_search"),
     path("purchase-report/", views.purchase_report, name="purchase_report"),
     path('reports/purchase/pdf/', views.purchase_report_pdf, name='purchase_report_pdf'),
 

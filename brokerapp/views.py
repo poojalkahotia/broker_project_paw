@@ -1140,6 +1140,18 @@ def sale_search_view(request):
             salemaster__party__partyname__icontains=partyname
         )
 
+    brokername = request.GET.get('brokername')
+    if brokername:
+        qs = qs.filter(
+            salemaster__broker__brokername__icontains=brokername
+        )
+
+    firmname = request.GET.get('firmname')
+    if firmname:
+        qs = qs.filter(
+            salemaster__firm__firmname__icontains=firmname
+        )
+
     
     # Final ordering & limit
     sales = qs.order_by('-salemaster__invdate')[:500]
@@ -1149,6 +1161,61 @@ def sale_search_view(request):
         'brokerapp/sale_search.html',
         {'sales': sales}
     )
+    
+
+def purchase_search_view(request):
+    """
+    PurchaseDetails search (UPDATED as per new UI).
+
+    GET params supported:
+      - partyname   (PurchaseMaster.party.partyname)
+      - brokername  (PurchaseMaster.broker.brokername)
+      - firmname    (PurchaseMaster.firm.firmname)
+
+    Results show:
+      Lot No, Party Name, Broker, Firm, Invoice No
+
+    Ordered by PurchaseMaster.invdate desc.
+    Limited to 500 records.
+    """
+
+    qs = PurchaseDetails.objects.select_related(
+        'purchasemaster',
+        'purchasemaster__party',
+        'purchasemaster__broker',
+        'purchasemaster__firm'
+    )
+
+    # Party filter
+    partyname = request.GET.get('partyname')
+    if partyname:
+        qs = qs.filter(
+            purchasemaster__party__partyname__icontains=partyname
+        )
+
+    # Broker filter
+    brokername = request.GET.get('brokername')
+    if brokername:
+        qs = qs.filter(
+            purchasemaster__broker__brokername__icontains=brokername
+        )
+
+    # Firm filter
+    firmname = request.GET.get('firmname')
+    if firmname:
+        qs = qs.filter(
+            purchasemaster__firm__firmname__icontains=firmname
+        )
+
+    # Final ordering & limit
+    purchases = qs.order_by('-purchasemaster__invdate')[:500]
+
+    return render(
+        request,
+        'brokerapp/purchase_search.html',
+        {'purchases': purchases}
+    )
+
 
 
 def bardana_report(request):

@@ -5,7 +5,7 @@
 <div class="container-fluid my-3 pt-4"><!-- pt-4 avoids navbar overlap -->
   <div class="card shadow-sm mx-auto" style="max-width:1100px;">
     <div class="card-header text-white d-flex justify-content-between align-items-center" style="background:#0b3d91;">
-      <h5 class="mb-0">Sale — Party / Lot Search</h5>
+      <h5 class="mb-0">Sale Search</h5>
     </div>
 
     <div class="card-body">
@@ -14,25 +14,53 @@
 
         <!-- Row 1: Party Name + Search -->
         <div class="row g-2 align-items-end">
-          <div class="col-auto" style="min-width:220px;">
-            <label for="partyname" class="form-label mb-1">Party Name</label>
-            <input type="text"
-                   name="partyname"
-                   id="partyname"
-                   class="form-control form-control-sm"
-                   value="{{ request.GET.partyname|default_if_none:'' }}"
-                   placeholder="Enter Party Name">
-          </div>
 
-          <div class="col-auto">
-            <label class="form-label mb-1 d-block">&nbsp;</label>
-            <button type="submit" class="btn btn-sm" style="background:#f5a623; color:#fff;">
-              <i class="bi bi-search"></i> Search
-            </button>
-          </div>
+      <!-- Party -->
+      <div class="col-auto" style="min-width:200px;">
+        <label for="partyname" class="form-label mb-1">Party</label>
+        <input type="text"
+              name="partyname"
+              id="partyname"
+              class="form-control form-control-sm"
+              value="{{ request.GET.partyname|default_if_none:'' }}"
+              placeholder="Party Name">
+      </div>
 
-          <div class="col"></div>
-        </div>
+      <!-- Broker -->
+      <div class="col-auto" style="min-width:200px;">
+        <label for="brokername" class="form-label mb-1">Broker</label>
+        <input type="text"
+              name="brokername"
+              id="brokername"
+              class="form-control form-control-sm"
+              value="{{ request.GET.brokername|default_if_none:'' }}"
+              placeholder="Broker Name">
+      </div>
+
+      <!-- Firm -->
+      <div class="col-auto" style="min-width:200px;">
+        <label for="firmname" class="form-label mb-1">Firm</label>
+        <input type="text"
+              name="firmname"
+              id="firmname"
+              class="form-control form-control-sm"
+              value="{{ request.GET.firmname|default_if_none:'' }}"
+              placeholder="Firm Name">
+      </div>
+
+      <!-- Search -->
+      <div class="col-auto">
+        <label class="form-label mb-1 d-block">&nbsp;</label>
+        <button type="submit" class="btn btn-sm"
+                style="background:#f5a623; color:#fff;">
+          <i class="bi bi-search"></i> Search
+        </button>
+      </div>
+
+      <div class="col"></div>
+
+    </div>
+
 
         
       </form>
