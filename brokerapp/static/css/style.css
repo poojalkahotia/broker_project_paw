@@ -398,3 +398,17 @@ input[type="number"]::-webkit-outer-spin-button {
   min-width: 60px !important;
   text-align: center;
 }
+
+
+/* Desktop pe horizontal scroll remove in party list*/
+@media (min-width: 992px) {
+    .table-responsive {
+        overflow-x: visible !important;
+        width: 100%;
+    }
+
+    .table {
+        width: 100%;
+    }
+}
+

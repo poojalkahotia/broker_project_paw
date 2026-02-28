@@ -24,6 +24,12 @@
           <button type="submit" name="action" value="statement" class="btn btn-sm btn-stmt">Statement</button>
         </form>
 
+         <!-- EXIT BUTTON -->
+      <a href="{% url 'dashboard' %}" 
+         class="btn btn-sm btn-outline-secondary px-3">
+         Exit
+      </a>
+
       </div>
     </div>
 
@@ -41,14 +47,43 @@
           </colgroup>
 
           <thead class="table-light small text-center align-middle">
-            <tr>
-              <th>Entry No</th>
-              <th>Date</th>
-              <th class="text-end">Debit</th>
-              <th class="text-end">Credit</th>
-              <th class="remark">Remark</th>
-              <th class="text-end">Balance</th>
-            </tr>
+          <tr>
+            <th>Entry No</th>
+
+            <!-- DATE SORT -->
+            <th>
+              <a href="?broker={{ selected.pk }}&sort=date&dir={% if sort_by == 'date' and direction == 'asc' %}desc{% else %}asc{% endif %}"
+                class="text-dark text-decoration-none fw-semibold">
+                Date
+              </a>
+            </th>
+
+            <!-- DEBIT SORT -->
+            <th class="text-end">
+              <a href="?broker={{ selected.pk }}&sort=debit&dir={% if sort_by == 'debit' and direction == 'asc' %}desc{% else %}asc{% endif %}"
+                class="text-dark text-decoration-none fw-semibold">
+                Debit
+              </a>
+            </th>
+
+            <!-- CREDIT SORT -->
+            <th class="text-end">
+              <a href="?broker={{ selected.pk }}&sort=credit&dir={% if sort_by == 'credit' and direction == 'asc' %}desc{% else %}asc{% endif %}"
+                class="text-dark text-decoration-none fw-semibold">
+                Credit
+              </a>
+            </th>
+
+            <th>Remark</th>
+
+            <!-- BALANCE SORT -->
+            <th class="text-end">
+              <a href="?broker={{ selected.pk }}&sort=balance&dir={% if sort_by == 'balance' and direction == 'asc' %}desc{% else %}asc{% endif %}"
+                class="text-dark text-decoration-none fw-semibold">
+                Balance
+              </a>
+            </th>
+          </tr>
           </thead>
 
           <tbody class="small">
@@ -120,7 +155,7 @@
         </form>
 
         <!-- PDF -->
-        <form method="post" class="m-0">
+        <form method="post" target="_blank" class="m-0">
           {% csrf_token %}
           <input type="hidden" name="broker" class="footer-broker" value="{% if selected %}{{ selected.pk }}{% endif %}">
           <button type="submit" name="action" value="pdf" class="btn btn-outline-danger">PDF</button>

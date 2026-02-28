@@ -27,7 +27,7 @@
             <ul class="navbar-nav me-auto">
                 <!-- Master Menu -->
                 <li class="nav-item dropdown">
-                    <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">Master</a>
+                    <a class="nav-link dropdown-toggle" href="#" id="menuMaster" role="button" data-bs-toggle="dropdown">Master</a>
                     <ul class="dropdown-menu">
                         <li><a class="dropdown-item" href="{% url 'party' %}">Party</a></li>
                         <li><a class="dropdown-item" href="{% url 'broker' %}">Broker</a></li>
@@ -38,7 +38,8 @@
 
                 <!-- Entry Menu -->
                 <li class="nav-item dropdown">
-                    <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">Entry</a>
+                    <!--<a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">Entry</a>-->
+                    <a class="nav-link dropdown-toggle" href="#" id="menuEntry" role="button" data-bs-toggle="dropdown">Entry</a>
                     <ul class="dropdown-menu">
                         <li><a class="dropdown-item" href="{% url 'sale_form_new' %}">Sale</a></li>
                         <li><a class="dropdown-item" href="{% url 'purchase_form_new' %}">Purchase</a></li>
@@ -53,7 +54,8 @@
 
                 <!-- Report Menu -->
                 <li class="nav-item dropdown">
-                    <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">Report</a>
+                    <!--<a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">Report</a>-->
+                    <a class="nav-link dropdown-toggle" href="#" id="menuReport" role="button" data-bs-toggle="dropdown">Report</a>
                     <ul class="dropdown-menu">
                         <li><a class="dropdown-item" href="{% url 'daily_page' %}">Daily Page</a></li>
                         <li><a class="dropdown-item" href="{% url 'sale_report' %}">Sale Report</a></li>
@@ -64,7 +66,8 @@
 
                  <!-- Accounts Menu -->
                 <li class="nav-item dropdown">
-                    <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">Account</a>
+                    <!--<a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">Account</a>-->
+                    <a class="nav-link dropdown-toggle" href="#" id="menuAccount" role="button" data-bs-toggle="dropdown">Account</a>
                     <ul class="dropdown-menu">
                         <li><a class="dropdown-item" href="{% url 'all_party_balance' %}">All Party Balance</a></li>
                         <li><a class="dropdown-item" href="{% url 'party_statement' %}">Party Statement</a></li>
@@ -275,6 +278,32 @@
 })(); // end IIFE
 </script>
 
+<script>
+document.addEventListener('keydown', function(e){
+
+    // agar user input me type kar raha hai toh ignore
+    if (['INPUT','TEXTAREA'].includes(document.activeElement.tagName)) return;
+
+    const menus = {
+        'm': 'menuMaster',
+        'e': 'menuEntry',
+        'r': 'menuReport',
+        'a': 'menuAccount'
+    };
+
+    if (e.altKey) {
+        const key = e.key.toLowerCase();
+        if (menus[key]) {
+            e.preventDefault();
+            const el = document.getElementById(menus[key]);
+            if (el) {
+                new bootstrap.Dropdown(el).toggle();
+            }
+        }
+    }
+
+});
+</script>
 
 </body>
 </html>

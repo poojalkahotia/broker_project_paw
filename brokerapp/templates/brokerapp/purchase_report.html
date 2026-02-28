@@ -177,31 +177,35 @@
 
     <!-- 📤 EXPORT OPTIONS -->
     <div class="card-footer d-flex justify-content-between align-items-center d-print-none">
-      <div>
+      
+      <div class="d-flex gap-2 flex-wrap">
+        
         <button class="btn btn-outline-secondary btn-sm" onclick="window.print()">
           <i class="fas fa-print"></i> Print
         </button>
 
         <button class="btn btn-outline-success btn-sm" id="exportExcel">
-          <i class="fas fa-file-excel"></i> Export Excel
+          <i class="fas fa-file-excel"></i> Excel
         </button>
 
-        <!-- PDF (same style as Sale Report) -->
-        <a id="exportPdf"
-           href="{% url 'purchase_report_pdf' %}?{{ request.GET.urlencode }}"
-           class="btn btn-outline-danger btn-sm"
-           target="_blank" rel="noopener">
+        <a id="exportPdf" class="btn btn-outline-danger btn-sm"
+          href="{% url 'sale_report_pdf' %}?{{ request.GET.urlencode }}"
+          target="_blank" rel="noopener">
           <i class="fas fa-file-pdf"></i> PDF
         </a>
+
+        <a href="{% url 'dashboard' %}" 
+          class="btn btn-outline-secondary btn-sm">
+          Exit
+        </a>
+
       </div>
 
       <small class="text-muted">
         Report generated on {{ now|date:"d M Y, h:i A" }}
       </small>
-    </div>
 
-  </div>
-</div>
+    </div>
 
 <!-- ✅ JS: Export Excel + shortcuts (E = Excel, P = PDF) -->
 <script>

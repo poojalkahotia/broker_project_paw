@@ -708,7 +708,7 @@ def update_sale(request, invno):
         messages.error(request, f"Error updating sale: {e}")
         return redirect("sale_form_update", invno=invno)
 
-def sale_data_view(request):
+#def sale_data_view(request):
     """List of sales (scoped to current org)."""
     sales = SaleMaster.objects.filter(org=request.current_org).order_by("-invno")
     return render(request, "brokerapp/saledata.html", {
@@ -716,7 +716,32 @@ def sale_data_view(request):
         "today_date": date.today(),
     })
 
+def sale_data_view(request):
+    """List of sales (scoped to current org) with column sorting."""
 
+    sort = request.GET.get("sort", "-invno")  # default sorting
+
+    allowed_sorts = [
+        "invno", "-invno",
+        "invdate", "-invdate",
+        "party__partyname", "-party__partyname",
+        "broker__brokername", "-broker__brokername",
+        "firm__firmname", "-firm__firmname",
+        "netamt", "-netamt",
+    ]
+
+    if sort not in allowed_sorts:
+        sort = "-invno"
+
+    sales = SaleMaster.objects.filter(
+        org=request.current_org
+    ).order_by(sort)
+
+    return render(request, "brokerapp/saledata.html", {
+        "sales": sales,
+        "current_sort": sort,
+        "today_date": date.today(),
+    })
 
 
 def delete_sale(request, invno):
@@ -1918,7 +1943,7 @@ def update_purchase(request, invno):
         messages.error(request, f"Error updating purchase: {e}")
         return redirect("purchase_form_update", invno=invno)
 
-def purchase_data_view(request):
+#def purchase_data_view(request):
     """List of purchases (scoped to current org)."""
     assert getattr(request, "current_org", None) is not None, "current_org missing"
     purchases = PurchaseMaster.objects.filter(org=request.current_org).order_by("-invno")
@@ -1927,7 +1952,34 @@ def purchase_data_view(request):
         "today_date": date.today(),
     })
 
+def purchase_data_view(request):
+    """List of purchases (scoped to current org) with column sorting."""
 
+    assert getattr(request, "current_org", None) is not None, "current_org missing"
+
+    sort = request.GET.get("sort", "-invno")
+
+    allowed_sorts = [
+        "invno", "-invno",
+        "invdate", "-invdate",
+        "party__partyname", "-party__partyname",
+        "broker__brokername", "-broker__brokername",
+        "firm__firmname", "-firm__firmname",
+        "netamt", "-netamt",
+    ]
+
+    if sort not in allowed_sorts:
+        sort = "-invno"
+
+    purchases = PurchaseMaster.objects.filter(
+        org=request.current_org
+    ).order_by(sort)
+
+    return render(request, "brokerapp/purchasedata.html", {
+        "purchases": purchases,
+        "current_sort": sort,
+        "today_date": date.today(),
+    })
 
 
 def delete_purchase(request, invno):
@@ -2371,13 +2423,32 @@ def party_view(request, pk=None):
         form = PartyForm(instance=instance, current_org=request.current_org)
 
     # Show only current org parties
+    # Base queryset (current org only)
+    # Base queryset (current org only)
     parties = HeadParty.objects.filter(org=request.current_org)
+
+    # -------- Sorting Only For Party Name & City --------
+    sort = request.GET.get('sort', 'partyname')   # default sorting
+    direction = request.GET.get('dir', 'asc')
+
+    allowed_fields = ['partyname', 'city']   # ONLY these two allowed
+
+    if sort not in allowed_fields:
+        sort = 'partyname'
+
+    if direction == 'desc':
+        parties = parties.order_by(f'-{sort}')
+    else:
+        parties = parties.order_by(sort)
+    # ----------- SORTING LOGIC END -----------
 
     return render(request, 'brokerapp/party.html', {
         'form': form,
         'parties': parties,
         'editing': pk is not None,
-        'editing_id': pk
+        'editing_id': pk,
+        'current_sort': sort,
+        'current_direction': direction,
     })
 
 
@@ -2438,13 +2509,31 @@ def broker_view(request, pk=None):
         form = BrokerForm(instance=instance, current_org=request.current_org)
 
     # Show only current org brokers
+    # Base queryset
     brokers = Broker.objects.filter(org=request.current_org)
+
+    # ---- Sorting (Broker Name only) ----
+    sort = request.GET.get('sort', 'brokername')
+    direction = request.GET.get('dir', 'asc')
+
+    allowed_fields = ['brokername']
+
+    if sort not in allowed_fields:
+        sort = 'brokername'
+
+    if direction == 'desc':
+        brokers = brokers.order_by(f'-{sort}')
+    else:
+        brokers = brokers.order_by(sort)
 
     return render(request, 'brokerapp/broker.html', {
         'form': form,
         'brokers': brokers,
         'editing': pk is not None,
-        'editing_id': pk
+        'editing_id': pk,
+        'current_sort': sort,
+        'current_dir': direction,
+
     })
 # Delete Broker
 def broker_delete(request, pk):
@@ -2468,7 +2557,22 @@ def firm_view(request, pk=None):
     Manage firms. Supports `?next=sale|purchase|daily` to return to calling form after save.
     """
     form = FirmForm()
-    firms = Firm.objects.all().order_by("firmname")
+    # Base queryset
+    firms = Firm.objects.all()
+
+    # ---- Sorting (Firm name only) ----
+    sort = request.GET.get('sort', 'firmname')
+    direction = request.GET.get('dir', 'asc')
+
+    allowed_fields = ['firmname']
+
+    if sort not in allowed_fields:
+        sort = 'firmname'
+
+    if direction == 'desc':
+        firms = firms.order_by(f'-{sort}')
+    else:
+        firms = firms.order_by(sort)
 
     if request.method == 'POST':
         form = FirmForm(request.POST)
@@ -2512,7 +2616,9 @@ def firm_view(request, pk=None):
 
     return render(request, 'brokerapp/firm.html', {
         'form': form,
-        'firms': firms
+        'firms': firms,
+        'current_sort': sort,
+        'current_dir': direction,
     })
 
 
@@ -2588,13 +2694,32 @@ def item_view(request, pk=None):
         form = ItemForm(instance=instance, current_org=request.current_org)
 
     # Show only current org items
+    # Base queryset (current org only)
     items = HeadItem.objects.filter(org=request.current_org)
+
+    # ---- Sorting (Item Name only) ----
+    sort = request.GET.get('sort', 'item_name')
+    direction = request.GET.get('dir', 'asc')
+
+    allowed_fields = ['item_name']
+
+    if sort not in allowed_fields:
+        sort = 'item_name'
+
+    if direction == 'desc':
+        items = items.order_by(f'-{sort}')
+    else:
+        items = items.order_by(sort)
 
     return render(request, 'brokerapp/item.html', {
         'form': form,
         'items': items,
         'editing': pk is not None,
-        'editing_id': pk
+        'editing_id': pk,
+         'current_sort': sort,
+        'current_dir': direction,
+
+
     })
 
 
@@ -3272,8 +3397,20 @@ class AllPartyBalanceView(TemplateView):
     # ---------- GET ----------
     def get(self, request, *args, **kwargs):
         today = date.today()
-        ctx = self._build_context(start=today, end=today, party=None)
-        ctx["show_table"] = False
+        sort_by = request.GET.get("sort", "party")
+        order = request.GET.get("order", "asc")
+
+        ctx = self._build_context(
+            start=today,
+            end=today,
+            party=None,
+            sort_by=sort_by,
+            order=order
+        )
+
+        ctx["sort_by"] = sort_by
+        ctx["order"] = order
+        ctx["show_table"] = True if request.GET.get("sort") else False
         return self.render_to_response(ctx)
 
     # ---------- POST ----------
@@ -3282,7 +3419,19 @@ class AllPartyBalanceView(TemplateView):
         today = date.today()
 
         # Build rows/totals (same data used by all actions)
-        ctx = self._build_context(start=today, end=today, party=None)
+        sort_by = request.GET.get("sort", "party")
+        order = request.GET.get("order", "asc")
+
+        ctx = self._build_context(
+            start=today,
+            end=today,
+            party=None,
+            sort_by=sort_by,
+            order=order
+        )
+
+        ctx["sort_by"] = sort_by
+        ctx["order"] = order
 
         # Balance -> show table in same template
         if action == "balance" or not action:
@@ -3353,7 +3502,7 @@ class AllPartyBalanceView(TemplateView):
 
             # Table headers
             headers = ["Party", "Op Dr", "Op Cr", "Opening", "Sale", "Purchase", "Naame", "Jama", "Balance"]
-            col_widths = [50, 18, 18, 24, 18, 22, 18, 18, 22]  # total should fit A4 width with margins
+            col_widths = [45, 16, 16, 22, 16, 20, 16, 16, 20]  # total should fit A4 width with margins
 
             pdf.set_font("Helvetica", "B", 9)
             for i, h in enumerate(headers):
@@ -3400,7 +3549,7 @@ class AllPartyBalanceView(TemplateView):
             pdf.output(buf)
             buf.seek(0)
             resp = HttpResponse(buf.read(), content_type="application/pdf")
-            resp["Content-Disposition"] = f'attachment; filename="all_party_balance_{today}.pdf"'
+            resp["Content-Disposition"] = f'inline; filename="all_party_balance_{today}.pdf"'
             return resp
 
         # Unknown action -> render without table
@@ -3408,7 +3557,7 @@ class AllPartyBalanceView(TemplateView):
         return self.render_to_response(ctx)
 
     # ---------- core calculation ----------
-    def _build_context(self, start, end, party):
+    def _build_context(self, start, end, party, sort_by="party", order="asc"):
         # parties
         parties = HeadParty.objects.all().order_by("partyname")
         if party:
@@ -3463,6 +3612,13 @@ class AllPartyBalanceView(TemplateView):
             totals["jama"] += jama
             totals["balance"] += balance
 
+        # ---------- Sorting ----------
+        reverse = True if order == "desc" else False
+
+        if sort_by == "party":
+            rows.sort(key=lambda x: x["party"].partyname.lower(), reverse=reverse)
+        elif sort_by in ["opening", "sale", "purchase", "naame", "jama", "balance"]:
+            rows.sort(key=lambda x: x[sort_by], reverse=reverse)
         return {"rows": rows, "totals": totals, "start": start, "end": end}
 
 # ---------- original party_statement (uses helper) ----------
@@ -3479,15 +3635,55 @@ class PartyStatementView(TemplateView):
 
     def get(self, request, *args, **kwargs):
         parties = HeadParty.objects.order_by("partyname")
-        ctx = {
+
+        party_id = request.GET.get("party")
+        sort_by = request.GET.get("sort", "date")
+        direction = request.GET.get("dir", "asc")
+
+        # If no party selected → show blank page
+        if not party_id:
+            return self.render_to_response({
+                "parties": parties,
+                "selected": None,
+                "entries": [],
+                "total_debit": Decimal("0"),
+                "total_credit": Decimal("0"),
+                "balance": Decimal("0"),
+                "sort_by": sort_by,
+                "direction": direction,
+            })
+
+        # Load selected party safely
+        try:
+            head = HeadParty.objects.get(pk=party_id)
+        except HeadParty.DoesNotExist:
+            return self.render_to_response({
+                "parties": parties,
+                "selected": None,
+                "entries": [],
+                "total_debit": Decimal("0"),
+                "total_credit": Decimal("0"),
+                "balance": Decimal("0"),
+                "sort_by": sort_by,
+                "direction": direction,
+            })
+
+        entries, total_debit, total_credit, balance = self._build_entries(
+            head,
+            sort_by=sort_by,
+            direction=direction
+        )
+
+        return self.render_to_response({
             "parties": parties,
-            "selected": None,
-            "entries": [],
-            "total_debit": Decimal("0"),
-            "total_credit": Decimal("0"),
-            "balance": Decimal("0"),
-        }
-        return self.render_to_response(ctx)
+            "selected": head,
+            "entries": entries,
+            "total_debit": total_debit,
+            "total_credit": total_credit,
+            "balance": balance,
+            "sort_by": sort_by,
+            "direction": direction,
+        })
 
     def post(self, request, *args, **kwargs):
         """
@@ -3513,7 +3709,16 @@ class PartyStatementView(TemplateView):
 
         # load party and compute entries
         head = get_object_or_404(HeadParty, pk=party_id)
-        entries, total_debit, total_credit, balance = self._build_entries(head)
+        sort_by = request.GET.get("sort", "date")
+        direction = request.GET.get("dir", "asc")
+
+        entries, total_debit, total_credit, balance = self._build_entries(
+            head,
+            sort_by=sort_by,
+            direction=direction
+        )
+
+        
 
         ctx = {
             "parties": parties,
@@ -3523,6 +3728,8 @@ class PartyStatementView(TemplateView):
             "total_credit": total_credit,
             "balance": balance,
             "today": date.today(),
+            "sort_by": sort_by,
+            "direction": direction,
         }
 
         # ---------- show statement ----------
@@ -3750,7 +3957,7 @@ class PartyStatementView(TemplateView):
                 buf.seek(0)
                 resp = HttpResponse(buf.read(), content_type="application/pdf")
                 safe_name = "".join(ch if ord(ch) < 128 else "?" for ch in head.partyname)[:40]
-                resp["Content-Disposition"] = f'attachment; filename="party_statement_{safe_name}.pdf"'
+                resp["Content-Disposition"] = f'inline; filename="party_statement_{safe_name}.pdf"'
                 return resp
             except Exception as exc:
                 return HttpResponse(f"PDF generation failed: {exc}", content_type="text/plain", status=500)
@@ -3759,7 +3966,7 @@ class PartyStatementView(TemplateView):
         return self.render_to_response(ctx)
 
     # ---------- helper ----------
-    def _build_entries(self, head):
+    def _build_entries(self, head, sort_by="date", direction="asc"):
         entries = []
         
         # helper: safely get firm label from different models
@@ -3820,20 +4027,60 @@ class PartyStatementView(TemplateView):
         # sort + totals + running balance
         # sort entries: "OPEN" first, then by date
         from datetime import datetime
+
+        # First calculate running balance in default date order
         entries = sorted(entries, key=lambda x: (
             0 if x.get("entry_no") == "OPEN" else 1,
-            x["date"] or datetime.max.date(), 
-            str(x.get("entry_no", ""))
+            x["date"] or datetime.max.date()
         ))
-        total_debit = sum(e["debit"] for e in entries)
-        total_credit = sum(e["credit"] for e in entries)
+
         bal = Decimal("0")
         for e in entries:
             bal += (e["debit"] or Decimal("0")) - (e["credit"] or Decimal("0"))
             e["balance"] = bal
+
+        # Now apply user sorting (except OPEN)
+        reverse = True if direction == "desc" else False
+
+        normal_entries = [e for e in entries if e.get("entry_no") != "OPEN"]
+        open_entries = [e for e in entries if e.get("entry_no") == "OPEN"]
+
+        if sort_by == "date":
+            normal_entries = sorted(
+                normal_entries,
+                key=lambda x: x["date"] or datetime.max.date(),
+                reverse=reverse
+            )
+
+        elif sort_by == "debit":
+            normal_entries = sorted(
+                normal_entries,
+                key=lambda x: x.get("debit") or Decimal("0"),
+                reverse=reverse
+            )
+
+        elif sort_by == "credit":
+            normal_entries = sorted(
+                normal_entries,
+                key=lambda x: x.get("credit") or Decimal("0"),
+                reverse=reverse
+            )
+
+        elif sort_by == "balance":
+            normal_entries = sorted(
+                normal_entries,
+                key=lambda x: x.get("balance") or Decimal("0"),
+                reverse=reverse
+            )
+
+        entries = open_entries + normal_entries
+
+        total_debit = sum(e["debit"] for e in entries)
+        total_credit = sum(e["credit"] for e in entries)
         balance = total_debit - total_credit
-        return entries, total_debit, total_credit, balance
-    
+
+        return entries, total_debit, total_credit, balance 
+
 class BrokerStatementView(TemplateView):
     """
     Single-URL Broker Statement view. POST name="action":
@@ -3846,17 +4093,42 @@ class BrokerStatementView(TemplateView):
     printable_template = "brokerapp/account/broker_statement_printable.html"
 
     def get(self, request, *args, **kwargs):
-        # Filter by current org
         brokers = Broker.objects.filter(org=request.current_org).order_by("brokername")
-        ctx = {
+
+        broker_id = request.GET.get("broker")
+        sort_by = request.GET.get("sort", "date")
+        direction = request.GET.get("dir", "asc")
+
+        if not broker_id:
+            return self.render_to_response({
+                "brokers": brokers,
+                "selected": None,
+                "entries": [],
+                "total_debit": Decimal("0"),
+                "total_credit": Decimal("0"),
+                "balance": Decimal("0"),
+                "sort_by": sort_by,
+                "direction": direction,
+            })
+
+        selected = get_object_or_404(Broker, pk=broker_id, org=request.current_org)
+
+        entries, total_debit, total_credit, balance = self._build_entries(
+            selected,
+            sort_by=sort_by,
+            direction=direction
+        )
+
+        return self.render_to_response({
             "brokers": brokers,
-            "selected": None,
-            "entries": [],
-            "total_debit": Decimal("0"),
-            "total_credit": Decimal("0"),
-            "balance": Decimal("0"),
-        }
-        return self.render_to_response(ctx)
+            "selected": selected,
+            "entries": entries,
+            "total_debit": total_debit,
+            "total_credit": total_credit,
+            "balance": balance,
+            "sort_by": sort_by,
+            "direction": direction,
+        })
 
     def post(self, request, *args, **kwargs):
         print("DEBUG: BrokerStatementView POST called")
@@ -4006,7 +4278,7 @@ class BrokerStatementView(TemplateView):
                 buf.seek(0)
                 resp = HttpResponse(buf.read(), content_type="application/pdf")
                 safe_name = "".join(ch if ord(ch) < 128 else "?" for ch in selected.brokername)[:40]
-                resp["Content-Disposition"] = f'attachment; filename="broker_statement_{safe_name}.pdf"'
+                resp["Content-Disposition"] = f'inline; filename="broker_statement_{safe_name}.pdf"'
                 return resp
             except Exception as exc:
                 return HttpResponse(f"PDF generation failed: {exc}", content_type="text/plain", status=500)
@@ -4014,7 +4286,7 @@ class BrokerStatementView(TemplateView):
         # fallback
         return self.render_to_response(ctx)
 
-    def _build_entries(self, selected):
+    def _build_entries(self, selected, sort_by="date", direction="asc"):
    
         entries = []
 
@@ -4095,24 +4367,60 @@ class BrokerStatementView(TemplateView):
 
         # sort entries: "OPEN" first, then by date (None treated as last if mostly non-OPEN? actually we put OPEN first explicitly)
         from datetime import datetime
-        # Key: (0 if OPEN else 1, date_or_max, entry_str)
-        entries.sort(key=lambda x: (
+
+    # First sort by date for correct running balance calculation
+        entries = sorted(entries, key=lambda x: (
             0 if x.get("entry_no") == "OPEN" else 1,
-            x["date"] or datetime.max.date(), 
-            str(x.get("entry_no", ""))
+            x["date"] or datetime.max.date()
         ))
 
-        # totals + running balance (Decimal)
-        total_debit = sum(e["debit"] for e in entries) if entries else Decimal("0")
-        total_credit = sum(e["credit"] for e in entries) if entries else Decimal("0")
+        # Calculate running balance
         bal = Decimal("0")
         for e in entries:
             bal += (e["credit"] - e["debit"])
             e["balance"] = bal
 
-        balance = bal
-        return entries, total_debit, total_credit, balance
+        # Now apply user sorting (OPEN always first)
+        reverse = True if direction == "desc" else False
 
+        open_entries = [e for e in entries if e.get("entry_no") == "OPEN"]
+        normal_entries = [e for e in entries if e.get("entry_no") != "OPEN"]
+
+        if sort_by == "date":
+            normal_entries = sorted(
+                normal_entries,
+                key=lambda x: x["date"] or datetime.max.date(),
+                reverse=reverse
+            )
+
+        elif sort_by == "debit":
+            normal_entries = sorted(
+                normal_entries,
+                key=lambda x: x.get("debit") or Decimal("0"),
+                reverse=reverse
+            )
+
+        elif sort_by == "credit":
+            normal_entries = sorted(
+                normal_entries,
+                key=lambda x: x.get("credit") or Decimal("0"),
+                reverse=reverse
+            )
+
+        elif sort_by == "balance":
+            normal_entries = sorted(
+                normal_entries,
+                key=lambda x: x.get("balance") or Decimal("0"),
+                reverse=reverse
+            )
+
+        entries = open_entries + normal_entries
+
+        total_debit = sum(e["debit"] for e in entries)
+        total_credit = sum(e["credit"] for e in entries)
+        balance = total_credit - total_debit
+
+        return entries, total_debit, total_credit, balance
 
 # --- AllBrokerBalanceView ---
 class AllBrokerBalanceView(TemplateView):
@@ -4144,8 +4452,24 @@ class AllBrokerBalanceView(TemplateView):
     # ---------- GET ----------
     def get(self, request, *args, **kwargs):
         today = date.today()
-        ctx = self._build_context(start=today, end=today, broker=None)
-        ctx["show_table"] = False
+
+        sort_by = request.GET.get("sort", "broker")
+        order = request.GET.get("order", "asc")
+
+        ctx = self._build_context(
+            start=today,
+            end=today,
+            broker=None,
+            sort_by=sort_by,
+            order=order
+        )
+
+        ctx["sort_by"] = sort_by
+        ctx["order"] = order
+
+        # show table if sorting
+        ctx["show_table"] = True if request.GET.get("sort") else False
+
         return self.render_to_response(ctx)
 
     # ---------- POST ----------
@@ -4154,7 +4478,19 @@ class AllBrokerBalanceView(TemplateView):
         today = date.today()
 
         # Build rows/totals (same data used by all actions)
-        ctx = self._build_context(start=today, end=today, broker=None)
+        sort_by = request.GET.get("sort", "broker")
+        order = request.GET.get("order", "asc")
+
+        ctx = self._build_context(
+            start=today,
+            end=today,
+            broker=None,
+            sort_by=sort_by,
+            order=order
+        )
+
+        ctx["sort_by"] = sort_by
+        ctx["order"] = order
 
         # Balance -> show table in same template
         if action == "balance" or not action:
@@ -4232,7 +4568,7 @@ class AllBrokerBalanceView(TemplateView):
 
             # Table headers
             headers = ["Broker", "Op Dr", "Op Cr", "Opening", "Sale", "Purchase", "Naame", "Jama", "Balance"]
-            col_widths = [50, 18, 18, 24, 18, 22, 18, 18, 22]
+            col_widths = [45, 16, 16, 22, 16, 20, 16, 16, 20]
 
             pdf.set_font("Helvetica", "B", 9)
             for i, h in enumerate(headers):
@@ -4273,7 +4609,7 @@ class AllBrokerBalanceView(TemplateView):
             pdf.output(buf)
             buf.seek(0)
             resp = HttpResponse(buf.read(), content_type="application/pdf")
-            resp["Content-Disposition"] = f'attachment; filename="all_broker_balance_{today}.pdf"'
+            resp["Content-Disposition"] = f'inline; filename="all_broker_balance_{today}.pdf"'
             return resp
 
         # Unknown action -> render without table
@@ -4281,7 +4617,7 @@ class AllBrokerBalanceView(TemplateView):
         return self.render_to_response(ctx)
 
     # ---------- core calculation ----------
-    def _build_context(self, start, end, broker):
+    def _build_context(self, start, end, broker, sort_by="broker", order="asc"):
         # brokers
         from .models import Broker, HeadParty, SaleMaster, PurchaseMaster, NaameEntry, JamaEntry, DailyPage
 
@@ -4337,5 +4673,11 @@ class AllBrokerBalanceView(TemplateView):
             totals["naame"] += naame
             totals["jama"] += jama
             totals["balance"] += balance
+# ---------- Sorting ----------
+        reverse = True if order == "desc" else False
 
+        if sort_by == "broker":
+            rows.sort(key=lambda x: x["broker"].brokername.lower(), reverse=reverse)
+        elif sort_by in ["opening", "sale", "purchase", "naame", "jama", "balance"]:
+            rows.sort(key=lambda x: x[sort_by], reverse=reverse)
         return {"rows": rows, "totals": totals, "start": start, "end": end}

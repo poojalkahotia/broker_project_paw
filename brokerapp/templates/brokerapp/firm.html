@@ -40,7 +40,12 @@
       <table class="table table-bordered table-striped">
         <thead class="table-light">
           <tr>
-            <th>Firm</th>
+            <th>
+              <a href="?sort=firmname&dir={% if current_sort == 'firmname' and current_dir == 'asc' %}desc{% else %}asc{% endif %}"
+                class="text-dark text-decoration-none">
+                Firm
+              </a>
+            </th>
           </tr>
         </thead>
         <tbody>

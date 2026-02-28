@@ -2,20 +2,63 @@
 
 {% block content %}
 <div class="container">
-    <h2 class="text-center text-success mb-4">Purchase Data</h2>
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="text-success mb-0">Purchase Data</h2>
+
+        <a href="{% url 'dashboard' %}" 
+           class="btn btn-secondary btn-sm px-3">
+            Exit
+        </a>
+    </div>
 
     <div class="table-responsive">
         <table class="table table-bordered table-striped">
             <thead class="table-dark">
-                <tr>
-                    <th>Invoice No</th>
-                    <th>Invoice Date</th>
-                    <th>Party Name</th>
-                     <th>Broker Name</th>
-                    <th>Firm</th>
-                    <th class="text-end">Amount</th>
-                    <th>Actions</th>
-                </tr>
+            <tr>
+                <th>
+                    <a href="?sort={% if current_sort == 'invno' %}-invno{% else %}invno{% endif %}"
+                    class="text-white text-decoration-none">
+                        Invoice No
+                    </a>
+                </th>
+
+                <th>
+                    <a href="?sort={% if current_sort == 'invdate' %}-invdate{% else %}invdate{% endif %}"
+                    class="text-white text-decoration-none">
+                        Invoice Date
+                    </a>
+                </th>
+
+                <th>
+                    <a href="?sort={% if current_sort == 'party__partyname' %}-party__partyname{% else %}party__partyname{% endif %}"
+                    class="text-white text-decoration-none">
+                        Party Name
+                    </a>
+                </th>
+
+                <th>
+                    <a href="?sort={% if current_sort == 'broker__brokername' %}-broker__brokername{% else %}broker__brokername{% endif %}"
+                    class="text-white text-decoration-none">
+                        Broker Name
+                    </a>
+                </th>
+
+                <th>
+                    <a href="?sort={% if current_sort == 'firm__firmname' %}-firm__firmname{% else %}firm__firmname{% endif %}"
+                    class="text-white text-decoration-none">
+                        Firm
+                    </a>
+                </th>
+
+                <th class="text-end">
+                    <a href="?sort={% if current_sort == 'netamt' %}-netamt{% else %}netamt{% endif %}"
+                    class="text-white text-decoration-none">
+                        Amount
+                    </a>
+                </th>
+
+                <th>Actions</th>
+            </tr>
             </thead>
             <tbody>
                 {% for purchase in purchases %}

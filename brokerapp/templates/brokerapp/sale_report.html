@@ -216,25 +216,36 @@
     </div>
 
     <!-- 📤 EXPORT OPTIONS -->
-    <div class="card-footer d-flex justify-content-between align-items-center d-print-none">
-      <div>
-        <button class="btn btn-outline-secondary btn-sm" onclick="window.print()">
-          <i class="fas fa-print"></i> Print
-        </button>
-        <button class="btn btn-outline-success btn-sm" id="exportExcel">
-          <i class="fas fa-file-excel"></i> Export Excel
-        </button>
-         <!-- PDF: added id so JS can trigger it via shortcut -->
-        <a id="exportPdf" class="btn btn-outline-danger btn-sm"
-           href="{% url 'sale_report_pdf' %}?{{ request.GET.urlencode }}"
-           target="_blank" rel="noopener">
-           <i class="fas fa-file-pdf"></i> PDF
-       </a>
-      </div>
-      <small class="text-muted">Report generated on {{ now|date:"d M Y, h:i A" }}</small>
+  <div class="card-footer d-flex justify-content-between align-items-center d-print-none">
+    
+    <div class="d-flex gap-2 flex-wrap">
+      
+      <button class="btn btn-outline-secondary btn-sm" onclick="window.print()">
+        <i class="fas fa-print"></i> Print
+      </button>
+
+      <button class="btn btn-outline-success btn-sm" id="exportExcel">
+        <i class="fas fa-file-excel"></i> Excel
+      </button>
+
+      <a id="exportPdf" class="btn btn-outline-danger btn-sm"
+        href="{% url 'sale_report_pdf' %}?{{ request.GET.urlencode }}"
+        target="_blank" rel="noopener">
+        <i class="fas fa-file-pdf"></i> PDF
+      </a>
+
+      <a href="{% url 'dashboard' %}" 
+        class="btn btn-outline-secondary btn-sm">
+        Exit
+      </a>
+
     </div>
+
+    <small class="text-muted">
+      Report generated on {{ now|date:"d M Y, h:i A" }}
+    </small>
+
   </div>
-</div>
 
 <!-- ✅ JS: Export Excel (exports the first/summary table on the page) -->
 <script>

@@ -6,8 +6,18 @@
   <div class="card shadow-sm" style="max-width:1000px; width:100%;">
     <div class="card-header text-white" style="background:#0b3d91;">
       <div class="d-flex justify-content-between align-items-center">
-        <strong>All Party Balance</strong>
-        <span class="small">View Party Balances</span>
+        <!-- Left Side -->
+        <div>
+          <strong>All Party Balance</strong>
+          <span class="small ms-2">View Party Balances</span>
+        </div>
+
+        <!-- Right Side -->
+        <a href="{% url 'dashboard' %}" 
+          class="btn btn-sm btn-outline-light px-3">
+          Exit
+        </a>
+        
       </div>
     </div>
 
@@ -21,7 +31,7 @@
           Balance
         </button>
         <button type="button" class="btn btn-outline-secondary" onclick="history.back();" style="min-width:120px;">
-          Exit
+          Clear
         </button>
       </form>
 
@@ -30,15 +40,57 @@
         <table class="table table-sm table-bordered align-middle mb-3">
           <thead class="table-light">
             <tr>
-              <th>Party</th>
+              <th>
+                <a href="?sort=party&order={% if sort_by == 'party' and order == 'asc' %}desc{% else %}asc{% endif %}"
+                  class="text-decoration-none text-dark">
+                  Party
+                </a>
+              </th>
+
               <th class="text-end">Op Dr</th>
               <th class="text-end">Op Cr</th>
-              <th class="text-end">Opening</th>
-              <th class="text-end">Sale</th>
-              <th class="text-end">Purchase</th>
-              <th class="text-end">Naame</th>
-              <th class="text-end">Jama</th>
-              <th class="text-end">Balance</th>
+
+              <th class="text-end">
+                <a href="?sort=opening&order={% if sort_by == 'opening' and order == 'asc' %}desc{% else %}asc{% endif %}"
+                  class="text-decoration-none text-dark">
+                  Opening
+                </a>
+              </th>
+
+              <th class="text-end">
+                <a href="?sort=sale&order={% if sort_by == 'sale' and order == 'asc' %}desc{% else %}asc{% endif %}"
+                  class="text-decoration-none text-dark">
+                  Sale
+                </a>
+              </th>
+
+              <th class="text-end">
+                <a href="?sort=purchase&order={% if sort_by == 'purchase' and order == 'asc' %}desc{% else %}asc{% endif %}"
+                  class="text-decoration-none text-dark">
+                  Purchase
+                </a>
+              </th>
+
+              <th class="text-end">
+                <a href="?sort=naame&order={% if sort_by == 'naame' and order == 'asc' %}desc{% else %}asc{% endif %}"
+                  class="text-decoration-none text-dark">
+                  Naame
+                </a>
+              </th>
+
+              <th class="text-end">
+                <a href="?sort=jama&order={% if sort_by == 'jama' and order == 'asc' %}desc{% else %}asc{% endif %}"
+                  class="text-decoration-none text-dark">
+                  Jama
+                </a>
+              </th>
+
+              <th class="text-end">
+                <a href="?sort=balance&order={% if sort_by == 'balance' and order == 'asc' %}desc{% else %}asc{% endif %}"
+                  class="text-decoration-none text-dark">
+                  Balance
+                </a>
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -68,23 +120,36 @@
       </div>
 
       <!-- Buttons must POST to server — wrap them in a small POST form -->
-      <form method="post" class="d-flex gap-2" style="margin-bottom:0;">
-        {% csrf_token %}
-        <button type="submit" name="action" value="print"
-                class="btn btn-outline-secondary btn-sm">
-          Print
-        </button>
+      <div class="d-flex gap-2" style="margin-bottom:0;">
 
-        <button type="submit" name="action" value="export_excel"
-                class="btn btn-outline-success btn-sm">
-          Export Excel
-        </button>
+        <!-- Print -->
+        <form method="post" class="m-0">
+          {% csrf_token %}
+          <button type="submit" name="action" value="print"
+                  class="btn btn-outline-secondary btn-sm">
+            Print
+          </button>
+        </form>
 
-        <button type="submit" name="action" value="pdf"
-                class="btn btn-outline-danger btn-sm">
-          PDF
-        </button>
-      </form>
+        <!-- Export Excel -->
+        <form method="post" class="m-0">
+          {% csrf_token %}
+          <button type="submit" name="action" value="export_excel"
+                  class="btn btn-outline-success btn-sm">
+             Excel
+          </button>
+        </form>
+
+        <!-- PDF (open in new tab) -->
+        <form method="post" target="_blank" class="m-0">
+          {% csrf_token %}
+          <button type="submit" name="action" value="pdf"
+                  class="btn btn-outline-danger btn-sm">
+            PDF
+          </button>
+        </form>
+
+</div>
 
       {% else %}
       <div class="text-center text-muted py-4">
