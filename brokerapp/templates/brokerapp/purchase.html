@@ -10,6 +10,7 @@
     <form method="POST"
           action="{% if purchase %}{% url 'update_purchase' purchase.invno %}{% else %}{% url 'save_purchase' %}{% endif %}">
         {% csrf_token %}
+        <input type="hidden" name="next" value="{{ request.GET.next|default_if_none:'' }}">
         <!-- Hidden JSON -->
         <input type="hidden" name="items_json" id="itemsJson" value='{{ purchase_items_json|default:"[]" }}'>
 
@@ -459,8 +460,8 @@
         <!-- Buttons -->
         <div class="text-center mt-4">
             <button type="submit" class="btn btn-primary">Save</button>
-            <a href="{% url 'purchasedata' %}" class="btn btn-secondary">Cancel</a>
-            <a href="{% url 'dashboard' %}" class="btn btn-secondary">Exit</a>
+            <a href="{% if request.GET.next %}{{ request.GET.next }}{% else %}{% url 'purchasedata' %}{% endif %}" class="btn btn-secondary">Cancel</a>
+            <a href="{% if request.GET.next %}{{ request.GET.next }}{% else %}{% url 'dashboard' %}{% endif %}" class="btn btn-secondary">Exit</a>
         </div>
     </form>
 </div>

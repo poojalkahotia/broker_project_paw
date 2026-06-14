@@ -89,10 +89,23 @@
 
           <tbody class="small">
             {% if entries %}
+              {% url 'party_statement' as party_stmt %}
               {% for e in entries %}
                 <tr>
                   <td class="align-middle text-center">
-                    {% if e.entry_no and e.entry_no != 'OPEN' %}{{ e.entry_no }}{% endif %}
+                    {% if e.entry_no and e.entry_no != 'OPEN' %}
+                      {% if e.type == 'sale' %}
+                        <a href="{% url 'sale_form_update' e.entry_no %}?next={{ party_stmt|urlencode }}%3Fparty%3D{{ selected.pk }}%26sort%3D{{ sort_by }}%26dir%3D{{ direction }}" class="fw-semibold text-decoration-none text-primary" title="Edit Sale Entry">{{ e.entry_no }}</a>
+                      {% elif e.type == 'purchase' %}
+                        <a href="{% url 'purchase_form_update' e.entry_no %}?next={{ party_stmt|urlencode }}%3Fparty%3D{{ selected.pk }}%26sort%3D{{ sort_by }}%26dir%3D{{ direction }}" class="fw-semibold text-decoration-none text-success" title="Edit Purchase Entry">{{ e.entry_no }}</a>
+                      {% elif e.type == 'jama' %}
+                        <a href="{% url 'daily_page' %}?date={{ e.date|date:'Y-m-d' }}&edit_type=jama&entry_no={{ e.entry_no }}&next={{ party_stmt|urlencode }}%3Fparty%3D{{ selected.pk }}%26sort%3D{{ sort_by }}%26dir%3D{{ direction }}" class="fw-semibold text-decoration-none text-info" title="Edit Jama Entry on Daily Page">{{ e.entry_no }}</a>
+                      {% elif e.type == 'naame' %}
+                        <a href="{% url 'daily_page' %}?date={{ e.date|date:'Y-m-d' }}&edit_type=naame&entry_no={{ e.entry_no }}&next={{ party_stmt|urlencode }}%3Fparty%3D{{ selected.pk }}%26sort%3D{{ sort_by }}%26dir%3D{{ direction }}" class="fw-semibold text-decoration-none text-info" title="Edit Naame Entry on Daily Page">{{ e.entry_no }}</a>
+                      {% else %}
+                        {{ e.entry_no }}
+                      {% endif %}
+                    {% endif %}
                   </td>
 
                   <td class="align-middle text-center">

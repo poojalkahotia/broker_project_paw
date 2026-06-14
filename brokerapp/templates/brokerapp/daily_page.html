@@ -32,7 +32,7 @@
            PDF
       </button>
 
-      <a href="{% url 'dashboard' %}" 
+      <a href="{% if request.GET.next %}{{ request.GET.next }}{% else %}{% url 'dashboard' %}{% endif %}" 
          class="btn btn-sm btn-outline-secondary px-3">
          Exit
       </a>
@@ -680,6 +680,28 @@
     });
 
     updateTotals();
+
+    // Automatically trigger edit if parameters are present in URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const editType = urlParams.get('edit_type');
+    const editEntryNo = urlParams.get('entry_no');
+    if (editType && editEntryNo) {
+      setTimeout(() => {
+        const btnSelector = editType === 'jama' ? `.jama-update-btn[data-entry="${editEntryNo}"]` : `.naame-update-btn[data-entry="${editEntryNo}"]`;
+        const btn = document.querySelector(btnSelector);
+        if (btn) {
+          btn.click();
+          const formId = editType === 'jama' ? 'jama_amount' : 'naame_amount';
+          const inputEl = document.getElementById(formId);
+          if (inputEl) {
+            inputEl.focus();
+            inputEl.select();
+          }
+          // Scroll the row into view smoothly
+          btn.closest('tr')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 100);
+    }
   });
 </script>
 {% endblock %}

@@ -443,6 +443,9 @@ def save_sale(request):
                     messages.warning(request, f"Sale saved but invoice email not sent: {e}")
 
         messages.success(request, "Sale entry saved successfully!")
+        next_url = request.POST.get("next") or request.GET.get("next")
+        if next_url:
+            return redirect(next_url)
         return redirect("saledata")
         
 
@@ -702,6 +705,9 @@ def update_sale(request, invno):
                     messages.warning(request, f"Invoice email not sent: {e}")
 
         messages.success(request, "Sale entry updated successfully!")
+        next_url = request.POST.get("next") or request.GET.get("next")
+        if next_url:
+            return redirect(next_url)
         return redirect("saledata")
 
     except Exception as e:
@@ -1675,6 +1681,9 @@ def save_purchase(request):
                     messages.warning(request, f"Purchase saved but invoice email not sent: {e}")
 
         messages.success(request, "Purchase entry saved successfully!")
+        next_url = request.POST.get("next") or request.GET.get("next")
+        if next_url:
+            return redirect(next_url)
         return redirect("purchasedata")
 
     except Exception as e:
@@ -1937,6 +1946,9 @@ def update_purchase(request, invno):
                     messages.warning(request, f"Invoice updated but email not sent: {e}")
 
         messages.success(request, "Purchase entry updated successfully!")
+        next_url = request.POST.get("next") or request.GET.get("next")
+        if next_url:
+            return redirect(next_url)
         return redirect("purchasedata")
 
     except Exception as e:
@@ -3990,6 +4002,7 @@ class PartyStatementView(TemplateView):
                 "credit": opening_cr,
                 "remark": "Opening Balance",
                 "firm_name": "",
+                "type": "open",
             })
 
         for s in SaleMaster.objects.filter(party=head).order_by("invdate"):
@@ -3997,32 +4010,36 @@ class PartyStatementView(TemplateView):
                             "date": s.invdate,
                             "debit": s.netamt, 
                             "credit": Decimal("0"),
-                            "remark": s.remark or f"Sale Inv#{s.invno}",
+                            "remark": f"Sale - {s.remark}" if s.remark else f"Sale Inv#{s.invno}",
                             "firm_name": firm_label_from(s),
+                            "type": "sale",
                            })
         for p in PurchaseMaster.objects.filter(party=head).order_by("invdate"):
             entries.append({"entry_no": p.invno,
                             "date": p.invdate,
                             "debit": Decimal("0"),
                             "credit": p.netamt,
-                            "remark": p.remark or f"Purchase Inv#{p.invno}",
+                            "remark": f"Purchase - {p.remark}" if p.remark else f"Purchase Inv#{p.invno}",
                             "firm_name": firm_label_from(p),
+                            "type": "purchase",
                         })
         for n in NaameEntry.objects.filter(party=head).order_by('daily_page__date'):
             entries.append({"entry_no": n.entry_no,
                             "date": n.daily_page.date,
                             "debit": n.amount, 
                             "credit": Decimal("0"),
-                            "remark": n.remark or "Naame",
+                            "remark": f"Naame - {n.remark}" if n.remark else "Naame",
                             "firm_name": firm_label_from(n),
+                            "type": "naame",
                           })
         for j in JamaEntry.objects.filter(party=head).order_by('daily_page__date'):
             entries.append({"entry_no": j.entry_no, 
                             "date": j.daily_page.date,
                             "debit": Decimal("0"), 
                             "credit": j.amount,
-                            "remark": j.remark or "Jama",
+                            "remark": f"Jama - {j.remark}" if j.remark else "Jama",
                             "firm_name": firm_label_from(j),
+                            "type": "jama",
                         })
         # sort + totals + running balance
         # sort entries: "OPEN" first, then by date
@@ -4307,6 +4324,7 @@ class BrokerStatementView(TemplateView):
                 "debit": opening_dr,
                 "credit": opening_cr,
                 "remark": "Opening Balance",
+                "type": "open",
             })
 
         # 1) JamaEntry -> credit
@@ -4321,6 +4339,8 @@ class BrokerStatementView(TemplateView):
                 "debit": Decimal("0"),
                 "credit": amt,
                 "remark": (j.remark or "") + " (Jama)",
+                "type": "jama",
+                "raw_entry_no": j.entry_no,
             })
 
         # 2) NaameEntry -> debit
@@ -4335,6 +4355,8 @@ class BrokerStatementView(TemplateView):
                 "debit": amt,
                 "credit": Decimal("0"),
                 "remark": (n.remark or "") + " (Naame)",
+                "type": "naame",
+                "raw_entry_no": n.entry_no,
             })
 
         # 3) SaleMaster -> debit (using dramt)
@@ -4349,6 +4371,8 @@ class BrokerStatementView(TemplateView):
                 "debit": amt,
                 "credit": Decimal("0"),
                 "remark": (getattr(s, "remark", "") or "") + " (Sale)",
+                "type": "sale",
+                "raw_entry_no": getattr(s, 'invno', ''),
             })
 
         # 4) PurchaseMaster -> credit (using dramt)
@@ -4363,6 +4387,8 @@ class BrokerStatementView(TemplateView):
                 "debit": Decimal("0"),
                 "credit": amt,
                 "remark": (getattr(p, "remark", "") or "") + " (Purchase)",
+                "type": "purchase",
+                "raw_entry_no": getattr(p, 'invno', ''),
             })
 
         # sort entries: "OPEN" first, then by date (None treated as last if mostly non-OPEN? actually we put OPEN first explicitly)
