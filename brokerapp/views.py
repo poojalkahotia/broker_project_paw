@@ -208,18 +208,19 @@ def save_sale(request):
         
         qi = to_decimal(request.POST.get("qi", 0))
         other = to_decimal(request.POST.get("other", 0))
+        other_sign = request.POST.get("other_sign", "-")
         advance = to_decimal(request.POST.get("advance", 0))
-        
+        advance_sign = request.POST.get("advance_sign", "-")
 
-        total = (
-            total_amt
-            + batavamt
-            + dramt
-            - qi
-            - other
-        ).quantize(Decimal("0.01"))
+        if other_sign == "+":
+            total = (total_amt + batavamt + dramt - qi + other).quantize(Decimal("0.01"))
+        else:
+            total = (total_amt + batavamt + dramt - qi - other).quantize(Decimal("0.01"))
 
-        netamt = (total - advance).quantize(Decimal("0.01"))
+        if advance_sign == "+":
+            netamt = (total + advance).quantize(Decimal("0.01"))
+        else:
+            netamt = (total - advance).quantize(Decimal("0.01"))
 
 
         # Resolve FKs inside same org
@@ -256,8 +257,10 @@ def save_sale(request):
             
             qi=qi,
             other=other,
+            other_sign=other_sign,
             total=total,
             advance=advance,
+            advance_sign=advance_sign,
             netamt=netamt,
             remark=request.POST.get("remark", "").strip(),
         )
@@ -491,19 +494,19 @@ def update_sale(request, invno):
        
         qi = to_decimal(request.POST.get("qi", 0))
         other = to_decimal(request.POST.get("other", 0))
+        other_sign = request.POST.get("other_sign", "-")
         advance = to_decimal(request.POST.get("advance", 0))
+        advance_sign = request.POST.get("advance_sign", "-")
 
-        
+        if other_sign == "+":
+            total = (total_amt + batavamt + dramt - qi + other).quantize(Decimal("0.01"))
+        else:
+            total = (total_amt + batavamt + dramt - qi - other).quantize(Decimal("0.01"))
 
-        total = (
-            total_amt
-            + batavamt
-            + dramt
-            - qi
-            - other
-        ).quantize(Decimal("0.01"))
-
-        netamt = (total - advance).quantize(Decimal("0.01"))
+        if advance_sign == "+":
+            netamt = (total + advance).quantize(Decimal("0.01"))
+        else:
+            netamt = (total - advance).quantize(Decimal("0.01"))
 
         # ---------- FOREIGN KEYS ----------
         party = get_object_or_404(HeadParty, pk=party_pk, org=request.current_org)
@@ -534,7 +537,9 @@ def update_sale(request, invno):
 
         sale.qi = qi
         sale.other = other
+        sale.other_sign = other_sign
         sale.advance = advance
+        sale.advance_sign = advance_sign
         sale.total = total
         sale.netamt = netamt
         sale.remark = request.POST.get("remark", "").strip()
@@ -1450,19 +1455,19 @@ def save_purchase(request):
         
         qi = to_decimal(request.POST.get("qi", 0))
         other = to_decimal(request.POST.get("other", 0))    
-
+        other_sign = request.POST.get("other_sign", "-")
         advance = to_decimal(request.POST.get("advance", 0))
+        advance_sign = request.POST.get("advance_sign", "-")
 
-        
-        total = (
-            total_amt
-            + batavamt
-            + dramt
-            - qi
-            - other
-        ).quantize(Decimal("0.01"))
+        if other_sign == "+":
+            total = (total_amt + batavamt + dramt - qi + other).quantize(Decimal("0.01"))
+        else:
+            total = (total_amt + batavamt + dramt - qi - other).quantize(Decimal("0.01"))
 
-        netamt = (total - advance).quantize(Decimal("0.01"))
+        if advance_sign == "+":
+            netamt = (total + advance).quantize(Decimal("0.01"))
+        else:
+            netamt = (total - advance).quantize(Decimal("0.01"))
 
 
         # -------- Resolve FKs within same org --------
@@ -1498,8 +1503,10 @@ def save_purchase(request):
             
             qi=qi,
             other=other,
+            other_sign=other_sign,
             total=total,
             advance=advance,
+            advance_sign=advance_sign,
             netamt=netamt,
             remark=request.POST.get("remark", "").strip(),
         )
@@ -1737,19 +1744,19 @@ def update_purchase(request, invno):
 
         qi = to_decimal(request.POST.get("qi", 0))
         other = to_decimal(request.POST.get("other", 0))
+        other_sign = request.POST.get("other_sign", "-")
         advance = to_decimal(request.POST.get("advance", 0))
+        advance_sign = request.POST.get("advance_sign", "-")
 
-        
+        if other_sign == "+":
+            total = (total_amt + batavamt + dramt - qi + other).quantize(Decimal("0.01"))
+        else:
+            total = (total_amt + batavamt + dramt - qi - other).quantize(Decimal("0.01"))
 
-        total = (
-            total_amt
-            + batavamt
-            + dramt
-            - qi
-            - other
-        ).quantize(Decimal("0.01"))
-
-        netamt = (total - advance).quantize(Decimal("0.01"))
+        if advance_sign == "+":
+            netamt = (total + advance).quantize(Decimal("0.01"))
+        else:
+            netamt = (total - advance).quantize(Decimal("0.01"))
 
 
         # ---------- FOREIGN KEYS ----------
@@ -1781,7 +1788,9 @@ def update_purchase(request, invno):
         purchase.dramt = dramt
         purchase.qi = qi
         purchase.other = other
+        purchase.other_sign = other_sign
         purchase.advance = advance
+        purchase.advance_sign = advance_sign
         purchase.total = total
         purchase.netamt = netamt
         purchase.remark = request.POST.get("remark", "").strip()

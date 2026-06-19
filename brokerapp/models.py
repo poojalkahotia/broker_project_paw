@@ -77,8 +77,10 @@ class SaleMaster(models.Model):
     qi = models.DecimalField(max_digits=12, decimal_places=2, default=0)
 
     other = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    other_sign = models.CharField(max_length=1, default="-")
     total = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     advance = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    advance_sign = models.CharField(max_length=1, default="-")
     netamt = models.DecimalField(max_digits=12, decimal_places=2, default=0)
 
     # remark stays CharField (single-line input in template)
@@ -160,8 +162,10 @@ class PurchaseMaster(models.Model):
     qi = models.DecimalField(max_digits=12, decimal_places=2, default=0)
 
     other = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    other_sign = models.CharField(max_length=1, default="-")
     total = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     advance = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    advance_sign = models.CharField(max_length=1, default="-")
     netamt = models.DecimalField(max_digits=12, decimal_places=2, default=0)
 
     remark = models.CharField(max_length=255, blank=True, null=True)

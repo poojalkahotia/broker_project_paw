@@ -398,8 +398,14 @@
                 <!-- Other -->
                 <div class="d-flex align-items-center justify-content-end mb-2">
                     <label for="other" class="form-label me-2 mb-0">Other:</label>
-                    <input type="number" step="any" id="other" name="other" class="form-control text-end w-50"
-                        value="{{ sale.other|default_if_none:'' }}">
+                    <div class="input-group w-50">
+                        <select name="other_sign" id="other_sign" class="form-select form-select-sm" style="max-width: 60px;">
+                            <option value="-" {% if sale and sale.other_sign == '-' %}selected{% elif not sale %}selected{% endif %}>-</option>
+                            <option value="+" {% if sale and sale.other_sign == '+' %}selected{% endif %}>+</option>
+                        </select>
+                        <input type="number" step="any" id="other" name="other" class="form-control form-control-sm text-end"
+                            value="{{ sale.other|default_if_none:'' }}">
+                    </div>
                 </div>
 
                 <!-- Total -->
@@ -412,8 +418,14 @@
                 <!-- Advance -->
                 <div class="d-flex align-items-center justify-content-end mb-2">
                     <label for="advance" class="form-label me-2 mb-0">Advance:</label>
-                    <input type="number" step="any" id="advance" name="advance" class="form-control text-end w-50"
-                        value="{{ sale.advance|default_if_none:'' }}">
+                    <div class="input-group w-50">
+                        <select name="advance_sign" id="advance_sign" class="form-select form-select-sm" style="max-width: 60px;">
+                            <option value="-" {% if sale and sale.advance_sign == '-' %}selected{% elif not sale %}selected{% endif %}>-</option>
+                            <option value="+" {% if sale and sale.advance_sign == '+' %}selected{% endif %}>+</option>
+                        </select>
+                        <input type="number" step="any" id="advance" name="advance" class="form-control form-control-sm text-end"
+                            value="{{ sale.advance|default_if_none:'' }}">
+                    </div>
                 </div>
 
                 <!-- Net Amount -->
@@ -541,17 +553,20 @@
     /* === QI & Other === */
     const qiAmt = Math.abs(getFloat('qi_total'));
     const otherAmt = Math.abs(getFloat('other'));
+    const otherSign = document.getElementById('other_sign') ? document.getElementById('other_sign').value : '-';
+    const otherFactor = otherSign === '+' ? 1 : -1;
     const advance = Math.abs(getFloat('advance'));
+    const advanceSign = document.getElementById('advance_sign') ? document.getElementById('advance_sign').value : '-';
+    const advanceFactor = advanceSign === '+' ? 1 : -1;
 
     /* === FINAL TOTAL (actual calculation) === */
     
-
     const finalAmt =
         totalamt
         + batavamt
         + dramt
         - qiAmt 
-        - otherAmt;
+        + (otherAmt * otherFactor);
 
     /* === DISPLAY (÷100 FORMAT) === */
     setVal('totalamt', totalamt);
@@ -561,7 +576,7 @@
     // total before advance
     setVal('total', finalAmt);
     // net after advance
-    const netAfterAdv = (finalAmt - advance);
+    const netAfterAdv = finalAmt + (advance * advanceFactor);
     setVal('netamt', netAfterAdv);
 
     // update JSON
@@ -814,6 +829,15 @@
             if (el) {
                 el.addEventListener('input', function () {
                     // ensure totals reflect latest changes from summary fields
+                    updateSummary();
+                });
+            }
+        });
+
+        ['other_sign', 'advance_sign'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) {
+                el.addEventListener('change', function () {
                     updateSummary();
                 });
             }
